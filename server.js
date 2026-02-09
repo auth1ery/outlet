@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { neon } from '@neondatabase/serverless';
 import Redis from 'ioredis';
+import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -21,9 +22,29 @@ const io = new Server(server, {
 const sql = neon(process.env.DATABASE_URL);
 const redis = new Redis(process.env.REDIS_URL);
 
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
+
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(join(__dirname, 'public')));
+
+const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const sendEmail = async (email, code) => {
+  await transporter.sendMail({
+    from: process.env.FROM_EMAIL,
+    to: email,
+    subject: 'outlet - verify your email',
+    text: `your verification code is: ${code}\n\nthis code expires in 10 minutes.`
+  });
+};
 
 app.post('/api/register', async (req, res) => {
   try {
@@ -47,12 +68,43 @@ app.post('/api/register', async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 10);
+    const code = genCode();
     
+    await redis.setex(`verify:${email}`, 600, code);
+    await redis.setex(`pending:${email}`, 600, JSON.stringify({ username, hash }));
+
+    await sendEmail(email, code);
+
+    res.json({ message: 'verification code sent' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/verify', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    const stored = await redis.get(`verify:${email}`);
+    if (!stored || stored !== code) {
+      return res.status(400).json({ error: 'invalid or expired code' });
+    }
+
+    const data = await redis.get(`pending:${email}`);
+    if (!data) {
+      return res.status(400).json({ error: 'registration expired' });
+    }
+
+    const { username, hash } = JSON.parse(data);
+
     const result = await sql`
       INSERT INTO users (email, username, password_hash, verified)
       VALUES (${email}, ${username}, ${hash}, true)
       RETURNING id, email, username
     `;
+
+    await redis.del(`verify:${email}`, `pending:${email}`);
 
     const token = jwt.sign({ id: result[0].id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
@@ -93,6 +145,27 @@ app.post('/api/login', async (req, res) => {
         username: user.username 
       } 
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/resend', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const data = await redis.get(`pending:${email}`);
+    if (!data) {
+      return res.status(400).json({ error: 'no pending registration' });
+    }
+
+    const code = genCode();
+    await redis.setex(`verify:${email}`, 600, code);
+
+    await sendEmail(email, code);
+
+    res.json({ message: 'code resent' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'server error' });
