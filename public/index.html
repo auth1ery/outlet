@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>outlet</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #36393f;
+      color: #dcddde;
+      overflow: hidden;
+    }
+    .hidden { display: none !important; }
+    .app { display: flex; height: 100vh; }
+    .sidebar { width: 240px; background: #2f3136; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 16px; border-bottom: 1px solid #202225; font-weight: 600; font-size: 14px; }
+    .sidebar-content { padding: 16px; flex-grow: 1; overflow-y: auto; }
+    .sidebar-footer { padding: 10px; background: #292b2f; display: flex; justify-content: space-between; align-items: center; }
+    .online-header { font-size: 12px; margin-bottom: 8px; color: #8e9297; text-transform: uppercase; }
+    .online-user { padding: 6px 8px; border-radius: 4px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .online-dot { width: 8px; height: 8px; border-radius: 50%; background: #3ba55d; }
+    .logout-btn { background: none; border: none; color: #b9bbbe; cursor: pointer; padding: 4px 8px; font-size: 12px; }
+    .chat { flex-grow: 1; display: flex; flex-direction: column; }
+    .chat-header { padding: 16px; border-bottom: 1px solid #202225; font-weight: 600; }
+    .messages { flex-grow: 1; overflow-y: auto; padding: 16px; }
+    .message { margin-bottom: 16px; display: flex; gap: 16px; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #5865f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 600; }
+    .message-content { }
+    .message-header { margin-bottom: 4px; }
+    .username { font-weight: 500; margin-right: 8px; }
+    .timestamp { font-size: 12px; color: #72767d; }
+    .input-area { padding: 16px; }
+    .typing-indicator { font-size: 12px; color: #b9bbbe; margin-bottom: 8px; }
+    .message-input { width: 100%; padding: 12px; background: #40444b; border: none; border-radius: 8px; color: #dcddde; font-size: 14px; outline: none; font-family: inherit; }
+    .auth-container { width: 100%; display: flex; align-items: center; justify-content: center; }
+    .auth-box { width: 400px; padding: 32px; background: #2f3136; border-radius: 8px; }
+    .auth-title { margin-bottom: 8px; text-align: center; }
+    .auth-subtitle { margin-bottom: 24px; text-align: center; color: #b9bbbe; }
+    .error { padding: 12px; background: #f04747; border-radius: 4px; margin-bottom: 16px; font-size: 14px; }
+    .success { padding: 12px; background: #43b581; border-radius: 4px; margin-bottom: 16px; font-size: 14px; }
+    .input { width: 100%; padding: 12px; margin-bottom: 16px; background: #202225; border: 1px solid #202225; border-radius: 4px; color: #dcddde; outline: none; font-family: inherit; font-size: 14px; }
+    .btn { width: 100%; padding: 12px; background: #5865f2; border: none; border-radius: 4px; color: white; font-weight: 500; cursor: pointer; margin-bottom: 8px; font-family: inherit; font-size: 14px; }
+    .btn-link { width: 100%; padding: 12px; background: transparent; border: none; color: #00aff4; cursor: pointer; font-size: 14px; font-family: inherit; }
+    .code-input { text-align: center; font-size: 24px; letter-spacing: 8px; }
+  </style>
+</head>
+<body>
+  <div id="login" class="auth-container">
+    <div class="auth-box">
+      <h2 class="auth-title">welcome to outlet</h2>
+      <p class="auth-subtitle">login to continue</p>
+      <div id="login-error" class="error hidden"></div>
+      <form id="login-form">
+        <input type="email" class="input" placeholder="email" id="login-email" required>
+        <input type="password" class="input" placeholder="password" id="login-password" required>
+        <button type="submit" class="btn">login</button>
+      </form>
+      <button class="btn-link" onclick="showRegister()">need an account? register</button>
+    </div>
+  </div>
+
+  <div id="register" class="auth-container hidden">
+    <div class="auth-box">
+      <h2 class="auth-title">create account</h2>
+      <p class="auth-subtitle">join outlet today</p>
+      <div id="register-error" class="error hidden"></div>
+      <form id="register-form">
+        <input type="email" class="input" placeholder="email" id="register-email" required>
+        <input type="text" class="input" placeholder="username" id="register-username" required>
+        <input type="password" class="input" placeholder="password" id="register-password" required>
+        <button type="submit" class="btn">register</button>
+      </form>
+      <button class="btn-link" onclick="showLogin()">already have an account? login</button>
+    </div>
+  </div>
+
+  <div id="verify" class="auth-container hidden">
+    <div class="auth-box">
+      <h2 class="auth-title">verify email</h2>
+      <p class="auth-subtitle" id="verify-email-text"></p>
+      <div id="verify-error" class="error hidden"></div>
+      <div id="verify-success" class="success hidden"></div>
+      <form id="verify-form">
+        <input type="text" class="input code-input" placeholder="6-digit code" id="verify-code" maxlength="6" required>
+        <button type="submit" class="btn">verify</button>
+      </form>
+      <button class="btn-link" onclick="resendCode()">resend code</button>
+    </div>
+  </div>
+
+  <div id="app" class="app hidden">
+    <div class="sidebar">
+      <div class="sidebar-header">outlet</div>
+      <div class="sidebar-content">
+        <div class="online-header" id="online-count">online — 0</div>
+        <div id="online-users"></div>
+      </div>
+      <div class="sidebar-footer">
+        <div id="current-username"></div>
+        <button class="logout-btn" onclick="logout()">logout</button>
+      </div>
+    </div>
+    <div class="chat">
+      <div class="chat-header"># general</div>
+      <div class="messages" id="messages"></div>
+      <div class="input-area">
+        <div class="typing-indicator" id="typing"></div>
+        <form id="message-form">
+          <input type="text" class="message-input" placeholder="message #general" id="message-input" autocomplete="off">
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const API = window.location.origin;
+    let socket = null;
+    let currentUser = null;
+    let typingTimeout = null;
+    let typingUsers = new Set();
+    let registerEmail = '';
+
+    function showView(viewId) {
+      ['login', 'register', 'verify', 'app'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(viewId).classList.remove('hidden');
+    }
+
+    function showError(formId, message) {
+      const errorEl = document.getElementById(`${formId}-error`);
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    function hideError(formId) {
+      document.getElementById(`${formId}-error`).classList.add('hidden');
+    }
+
+    function showLogin() {
+      showView('login');
+      hideError('login');
+    }
+
+    function showRegister() {
+      showView('register');
+      hideError('register');
+    }
+
+    async function resendCode() {
+      try {
+        const res = await fetch(`${API}/api/resend`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: registerEmail })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          const successEl = document.getElementById('verify-success');
+          successEl.textContent = data.message;
+          successEl.classList.remove('hidden');
+          setTimeout(() => successEl.classList.add('hidden'), 3000);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      if (socket) socket.disconnect();
+      showLogin();
+    }
+
+    function addMessage(msg) {
+      const messagesEl = document.getElementById('messages');
+      const msgEl = document.createElement('div');
+      msgEl.className = 'message';
+      msgEl.innerHTML = `
+        <div class="avatar">${msg.username[0].toUpperCase()}</div>
+        <div class="message-content">
+          <div class="message-header">
+            <span class="username">${msg.username}</span>
+            <span class="timestamp">${new Date(msg.created_at).toLocaleTimeString()}</span>
+          </div>
+          <div>${msg.content}</div>
+        </div>
+      `;
+      messagesEl.appendChild(msgEl);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function updateOnlineUsers(users) {
+      document.getElementById('online-count').textContent = `online — ${users.length}`;
+      const container = document.getElementById('online-users');
+      container.innerHTML = users.map(u => `
+        <div class="online-user">
+          <div class="online-dot"></div>
+          ${u}
+        </div>
+      `).join('');
+    }
+
+    function updateTyping() {
+      const typingEl = document.getElementById('typing');
+      if (typingUsers.size === 0) {
+        typingEl.textContent = '';
+        return;
+      }
+      const names = Array.from(typingUsers).join(', ');
+      typingEl.textContent = `${names} ${typingUsers.size === 1 ? 'is' : 'are'} typing...`;
+    }
+
+    function initSocket(token) {
+      socket = io(API, {
+        auth: { token },
+        transports: ['websocket']
+      });
+
+      socket.on('message', addMessage);
+
+      socket.on('online', updateOnlineUsers);
+
+      socket.on('typing', (data) => {
+        if (data.typing) {
+          typingUsers.add(data.username);
+        } else {
+          typingUsers.delete(data.username);
+        }
+        updateTyping();
+      });
+    }
+
+    async function loadMessages(token) {
+      try {
+        const res = await fetch(`${API}/api/messages`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const messages = await res.json();
+        messages.forEach(addMessage);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError('login');
+
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const res = await fetch(`${API}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('token', data.token);
+          currentUser = data.user;
+          document.getElementById('current-username').textContent = data.user.username;
+          initSocket(data.token);
+          await loadMessages(data.token);
+          showView('app');
+        } else {
+          showError('login', data.error);
+        }
+      } catch (err) {
+        showError('login', 'server error');
+      }
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError('register');
+
+      const email = document.getElementById('register-email').value;
+      const username = document.getElementById('register-username').value;
+      const password = document.getElementById('register-password').value;
+
+      try {
+        const res = await fetch(`${API}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, username, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          registerEmail = email;
+          document.getElementById('verify-email-text').textContent = `enter the 6-digit code sent to ${email}`;
+          showView('verify');
+        } else {
+          showError('register', data.error);
+        }
+      } catch (err) {
+        showError('register', 'server error');
+      }
+    });
+
+    document.getElementById('verify-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError('verify');
+
+      const code = document.getElementById('verify-code').value;
+
+      try {
+        const res = await fetch(`${API}/api/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: registerEmail, code })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('token', data.token);
+          currentUser = data.user;
+          document.getElementById('current-username').textContent = data.user.username;
+          initSocket(data.token);
+          await loadMessages(data.token);
+          showView('app');
+        } else {
+          showError('verify', data.error);
+        }
+      } catch (err) {
+        showError('verify', 'server error');
+      }
+    });
+
+    document.getElementById('message-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('message-input');
+      const content = input.value.trim();
+
+      if (!content || !socket) return;
+
+      socket.emit('message', { content });
+      input.value = '';
+      socket.emit('typing', false);
+    });
+
+    document.getElementById('message-input').addEventListener('input', (e) => {
+      if (!socket) return;
+
+      socket.emit('typing', true);
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        socket.emit('typing', false);
+      }, 1000);
+    });
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch(`${API}/api/messages`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(async res => {
+          if (res.ok) {
+            const messages = await res.json();
+            initSocket(token);
+            messages.forEach(addMessage);
+            showView('app');
+          } else {
+            localStorage.removeItem('token');
+            showLogin();
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          showLogin();
+        });
+    } else {
+      showLogin();
+    }
+  </script>
+</body>
+</html>
