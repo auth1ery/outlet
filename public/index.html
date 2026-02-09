@@ -32,7 +32,7 @@
     .username { font-weight: 500; margin-right: 8px; }
     .timestamp { font-size: 12px; color: #72767d; }
     .input-area { padding: 16px; }
-    .typing-indicator { font-size: 12px; color: #b9bbbe; margin-bottom: 8px; }
+    .typing-indicator { font-size: 12px; color: #b9bbbe; margin-bottom: 8px; min-height: 18px; }
     .message-input { width: 100%; padding: 12px; background: #40444b; border: none; border-radius: 8px; color: #dcddde; font-size: 14px; outline: none; font-family: inherit; }
     .auth-container { width: 100%; display: flex; align-items: center; justify-content: center; }
     .auth-box { width: 400px; padding: 32px; background: #2f3136; border-radius: 8px; }
@@ -42,12 +42,17 @@
     .success { padding: 12px; background: #43b581; border-radius: 4px; margin-bottom: 16px; font-size: 14px; }
     .input { width: 100%; padding: 12px; margin-bottom: 16px; background: #202225; border: 1px solid #202225; border-radius: 4px; color: #dcddde; outline: none; font-family: inherit; font-size: 14px; }
     .btn { width: 100%; padding: 12px; background: #5865f2; border: none; border-radius: 4px; color: white; font-weight: 500; cursor: pointer; margin-bottom: 8px; font-family: inherit; font-size: 14px; }
+    .btn:hover { background: #4752c4; }
     .btn-link { width: 100%; padding: 12px; background: transparent; border: none; color: #00aff4; cursor: pointer; font-size: 14px; font-family: inherit; }
+    .btn-link:hover { text-decoration: underline; }
     .code-input { text-align: center; font-size: 24px; letter-spacing: 8px; }
+    .loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 14px; color: #b9bbbe; }
   </style>
 </head>
 <body>
-  <div id="login" class="auth-container">
+  <div id="loading" class="loading">loading...</div>
+
+  <div id="login" class="auth-container hidden">
     <div class="auth-box">
       <h2 class="auth-title">welcome to outlet</h2>
       <p class="auth-subtitle">login to continue</p>
@@ -122,9 +127,10 @@
     let typingTimeout = null;
     let typingUsers = new Set();
     let registerEmail = '';
+    let isInitialized = false;
 
     function showView(viewId) {
-      ['login', 'register', 'verify', 'app'].forEach(id => {
+      ['loading', 'login', 'register', 'verify', 'app'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       document.getElementById(viewId).classList.remove('hidden');
@@ -165,15 +171,24 @@
           successEl.textContent = data.message;
           successEl.classList.remove('hidden');
           setTimeout(() => successEl.classList.add('hidden'), 3000);
+        } else {
+          showError('verify', data.error);
         }
       } catch (err) {
-        console.error(err);
+        showError('verify', 'server error');
       }
     }
 
     function logout() {
       localStorage.removeItem('token');
-      if (socket) socket.disconnect();
+      localStorage.removeItem('user');
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+      currentUser = null;
+      typingUsers.clear();
+      document.getElementById('messages').innerHTML = '';
       showLogin();
     }
 
@@ -217,9 +232,24 @@
     }
 
     function initSocket(token) {
+      if (socket) {
+        socket.disconnect();
+      }
+
       socket = io(API, {
         auth: { token },
-        transports: ['websocket']
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5
+      });
+
+      socket.on('connect', () => {
+        console.log('connected');
+      });
+
+      socket.on('disconnect', () => {
+        console.log('disconnected');
       });
 
       socket.on('message', addMessage);
@@ -241,10 +271,31 @@
         const res = await fetch(`${API}/api/messages`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        
+        if (!res.ok) {
+          throw new Error('failed to load messages');
+        }
+        
         const messages = await res.json();
         messages.forEach(addMessage);
       } catch (err) {
-        console.error(err);
+        console.error('load messages error:', err);
+      }
+    }
+
+    async function initApp(token, user) {
+      try {
+        currentUser = user;
+        document.getElementById('current-username').textContent = user.username;
+        
+        initSocket(token);
+        await loadMessages(token);
+        
+        showView('app');
+        isInitialized = true;
+      } catch (err) {
+        console.error('init error:', err);
+        logout();
       }
     }
 
@@ -266,11 +317,8 @@
 
         if (res.ok) {
           localStorage.setItem('token', data.token);
-          currentUser = data.user;
-          document.getElementById('current-username').textContent = data.user.username;
-          initSocket(data.token);
-          await loadMessages(data.token);
-          showView('app');
+          localStorage.setItem('user', JSON.stringify(data.user));
+          await initApp(data.token, data.user);
         } else {
           showError('login', data.error);
         }
@@ -325,11 +373,8 @@
 
         if (res.ok) {
           localStorage.setItem('token', data.token);
-          currentUser = data.user;
-          document.getElementById('current-username').textContent = data.user.username;
-          initSocket(data.token);
-          await loadMessages(data.token);
-          showView('app');
+          localStorage.setItem('user', JSON.stringify(data.user));
+          await initApp(data.token, data.user);
         } else {
           showError('verify', data.error);
         }
@@ -360,29 +405,38 @@
       }, 1000);
     });
 
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetch(`${API}/api/messages`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(async res => {
-          if (res.ok) {
-            const messages = await res.json();
-            initSocket(token);
-            messages.forEach(addMessage);
-            showView('app');
-          } else {
-            localStorage.removeItem('token');
-            showLogin();
-          }
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          showLogin();
+    async function autoLogin() {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      
+      if (!token || !userStr) {
+        showLogin();
+        return;
+      }
+
+      try {
+        const user = JSON.parse(userStr);
+        
+        const res = await fetch(`${API}/api/messages`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
-    } else {
-      showLogin();
+
+        if (res.ok) {
+          await initApp(token, user);
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          showLogin();
+        }
+      } catch (err) {
+        console.error('auto login error:', err);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        showLogin();
+      }
     }
+
+    autoLogin();
   </script>
 </body>
 </html>
