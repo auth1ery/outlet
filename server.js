@@ -63,9 +63,12 @@ const authMiddleware = (req, res, next) => {
 
 app.post('/api/register', async (req, res) => {
   try {
-    const { email, username, password } = req.body;
+    const { username, password } = req.body;
     
-    if (!email || !username || !password) {
+    console.log('Register attempt:', { username, hasPassword: !!password });
+    
+    if (!username || !password) {
+      console.log('Missing fields');
       return res.status(400).json({ error: 'missing fields' });
     }
 
@@ -77,17 +80,17 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ error: 'password must be at least 6 characters' });
     }
 
-    const existing = await sql`SELECT id FROM users WHERE email = ${email} OR username = ${username}`;
+    const existing = await sql`SELECT id FROM users WHERE username = ${username}`;
     if (existing.length > 0) {
-      return res.status(400).json({ error: 'email or username already exists' });
+      return res.status(400).json({ error: 'username already exists' });
     }
 
     const hash = await bcrypt.hash(password, 10);
 
     const result = await sql`
-      INSERT INTO users (email, username, password_hash, verified, display_name)
-      VALUES (${email}, ${username}, ${hash}, true, ${username})
-      RETURNING id, email, username, display_name, avatar_url, bio, theme
+      INSERT INTO users (username, password_hash, display_name)
+      VALUES (${username}, ${hash}, ${username})
+      RETURNING id, username, display_name, avatar_url, bio, theme
     `;
 
     const token = jwt.sign({ id: result[0].id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -101,9 +104,11 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    const users = await sql`SELECT * FROM users WHERE email = ${email}`;
+    console.log('Login attempt:', { username, hasPassword: !!password });
+
+    const users = await sql`SELECT * FROM users WHERE username = ${username}`;
     if (users.length === 0) {
       return res.status(401).json({ error: 'invalid credentials' });
     }
@@ -121,7 +126,6 @@ app.post('/api/login', async (req, res) => {
       token, 
       user: { 
         id: user.id, 
-        email: user.email, 
         username: user.username,
         display_name: user.display_name || user.username,
         avatar_url: user.avatar_url,
@@ -160,7 +164,7 @@ app.get('/api/messages', async (req, res) => {
 app.get('/api/profile', authMiddleware, async (req, res) => {
   try {
     const users = await sql`
-      SELECT id, email, username, display_name, avatar_url, bio, theme, created_at
+      SELECT id, username, display_name, avatar_url, bio, theme, created_at
       FROM users WHERE id = ${req.userId}
     `;
     
@@ -205,7 +209,7 @@ app.put('/api/profile', authMiddleware, async (req, res) => {
           bio = COALESCE(${updates.bio}, bio),
           theme = COALESCE(${updates.theme}, theme)
       WHERE id = ${req.userId}
-      RETURNING id, email, username, display_name, avatar_url, bio, theme
+      RETURNING id, username, display_name, avatar_url, bio, theme
     `;
 
     res.json(result[0]);
@@ -240,7 +244,7 @@ app.post('/api/profile/avatar', authMiddleware, upload.single('avatar'), async (
       UPDATE users 
       SET avatar_url = ${avatarUrl}
       WHERE id = ${req.userId}
-      RETURNING id, email, username, display_name, avatar_url, bio, theme
+      RETURNING id, username, display_name, avatar_url, bio, theme
     `;
 
     res.json(result[0]);
