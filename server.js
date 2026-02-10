@@ -219,6 +219,33 @@ app.put('/api/profile', authMiddleware, async (req, res) => {
   }
 });
 
+app.delete('/api/account', authMiddleware, async (req, res) => {
+  try {
+    const { confirmation } = req.body;
+    
+    const users = await sql`SELECT username FROM users WHERE id = ${req.userId}`;
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'user not found' });
+    }
+    
+    const username = users[0].username;
+    const expectedConfirmation = `sudo delete account ${username}`;
+    
+    if (confirmation !== expectedConfirmation) {
+      return res.status(400).json({ 
+        error: `confirmation phrase incorrect. type exactly: sudo delete account ${username}` 
+      });
+    }
+    
+    await sql`DELETE FROM users WHERE id = ${req.userId}`;
+    
+    res.json({ message: 'account deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
 app.post('/api/profile/avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) {
