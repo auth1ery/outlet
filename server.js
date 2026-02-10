@@ -93,7 +93,15 @@ app.post('/api/register', async (req, res) => {
       RETURNING id, username, display_name, avatar_url, bio, theme
     `;
 
-    const token = jwt.sign({ id: result[0].id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    const userId = result[0].id;
+
+    // Auto-join the default "outlet" server
+    await sql`
+      INSERT INTO server_members (user_id, server_id)
+      VALUES (${userId}, 1)
+    `;
+
+    const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     res.json({ token, user: result[0] });
   } catch (err) {
@@ -139,22 +147,219 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.get('/api/messages', async (req, res) => {
+app.get('/api/servers', authMiddleware, async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'unauthorized' });
+    const servers = await sql`
+      SELECT s.id, s.name, s.owner_id, s.invite_code
+      FROM servers s
+      JOIN server_members sm ON s.id = sm.server_id
+      WHERE sm.user_id = ${req.userId}
+      ORDER BY s.id ASC
+    `;
+    res.json(servers);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
 
-    jwt.verify(token, process.env.JWT_SECRET);
+app.get('/api/servers/:serverId/channels', authMiddleware, async (req, res) => {
+  try {
+    const { serverId } = req.params;
+    
+    // Check if user is member
+    const members = await sql`
+      SELECT 1 FROM server_members 
+      WHERE user_id = ${req.userId} AND server_id = ${serverId}
+    `;
+    if (members.length === 0) {
+      return res.status(403).json({ error: 'not a member of this server' });
+    }
+
+    const channels = await sql`
+      SELECT id, name, created_at
+      FROM channels
+      WHERE server_id = ${serverId}
+      ORDER BY id ASC
+    `;
+    res.json(channels);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.get('/api/channels/:channelId/messages', authMiddleware, async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    
+    // Check if user has access to this channel
+    const access = await sql`
+      SELECT 1 FROM channels c
+      JOIN server_members sm ON c.server_id = sm.server_id
+      WHERE c.id = ${channelId} AND sm.user_id = ${req.userId}
+    `;
+    if (access.length === 0) {
+      return res.status(403).json({ error: 'no access to this channel' });
+    }
 
     const messages = await sql`
       SELECT m.id, m.content, m.created_at, u.username, u.display_name, u.avatar_url, u.id as user_id
       FROM messages m
       JOIN users u ON m.user_id = u.id
+      WHERE m.channel_id = ${channelId}
       ORDER BY m.created_at DESC
       LIMIT 100
     `;
 
     res.json(messages.reverse());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.get('/api/servers/:serverId/members', authMiddleware, async (req, res) => {
+  try {
+    const { serverId } = req.params;
+    
+    // Check if user is member
+    const isMember = await sql`
+      SELECT 1 FROM server_members 
+      WHERE user_id = ${req.userId} AND server_id = ${serverId}
+    `;
+    if (isMember.length === 0) {
+      return res.status(403).json({ error: 'not a member of this server' });
+    }
+
+    const members = await sql`
+      SELECT u.id, u.username, u.display_name, u.avatar_url
+      FROM users u
+      JOIN server_members sm ON u.id = sm.user_id
+      WHERE sm.server_id = ${serverId}
+      ORDER BY u.username ASC
+    `;
+    res.json(members);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/servers', authMiddleware, async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name || name.length < 2 || name.length > 32) {
+      return res.status(400).json({ error: 'server name must be 2-32 characters' });
+    }
+
+    // Check if user already owns a server
+    const existing = await sql`
+      SELECT id FROM servers WHERE owner_id = ${req.userId}
+    `;
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'you already own a server' });
+    }
+
+    // Generate invite code
+    const inviteCode = Math.random().toString(36).substring(2, 10);
+
+    const server = await sql`
+      INSERT INTO servers (name, owner_id, invite_code)
+      VALUES (${name}, ${req.userId}, ${inviteCode})
+      RETURNING id, name, owner_id, invite_code
+    `;
+
+    // Auto-join as member
+    await sql`
+      INSERT INTO server_members (user_id, server_id)
+      VALUES (${req.userId}, ${server[0].id})
+    `;
+
+    // Create default "general" channel
+    await sql`
+      INSERT INTO channels (server_id, name)
+      VALUES (${server[0].id}, 'general')
+    `;
+
+    res.json(server[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/servers/:serverId/channels', authMiddleware, async (req, res) => {
+  try {
+    const { serverId } = req.params;
+    const { name } = req.body;
+    
+    if (!name || name.length < 2 || name.length > 32) {
+      return res.status(400).json({ error: 'channel name must be 2-32 characters' });
+    }
+
+    // Check if user is owner
+    const servers = await sql`
+      SELECT owner_id FROM servers WHERE id = ${serverId}
+    `;
+    if (servers.length === 0 || servers[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'only server owner can create channels' });
+    }
+
+    // Check channel limit (4 max)
+    const channelCount = await sql`
+      SELECT COUNT(*) as count FROM channels WHERE server_id = ${serverId}
+    `;
+    if (parseInt(channelCount[0].count) >= 4) {
+      return res.status(400).json({ error: 'max 4 channels per server' });
+    }
+
+    const channel = await sql`
+      INSERT INTO channels (server_id, name)
+      VALUES (${serverId}, ${name})
+      RETURNING id, name, created_at
+    `;
+
+    res.json(channel[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/servers/join', authMiddleware, async (req, res) => {
+  try {
+    const { inviteCode } = req.body;
+    
+    if (!inviteCode) {
+      return res.status(400).json({ error: 'invite code required' });
+    }
+
+    const servers = await sql`
+      SELECT id, name, owner_id, invite_code FROM servers WHERE invite_code = ${inviteCode}
+    `;
+    if (servers.length === 0) {
+      return res.status(404).json({ error: 'invalid invite code' });
+    }
+
+    const server = servers[0];
+
+    // Check if already a member
+    const existing = await sql`
+      SELECT 1 FROM server_members 
+      WHERE user_id = ${req.userId} AND server_id = ${server.id}
+    `;
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'already a member' });
+    }
+
+    await sql`
+      INSERT INTO server_members (user_id, server_id)
+      VALUES (${req.userId}, ${server.id})
+    `;
+
+    res.json(server);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'server error' });
@@ -281,7 +486,7 @@ app.post('/api/profile/avatar', authMiddleware, upload.single('avatar'), async (
   }
 });
 
-const users = new Map();
+const users = new Map(); // userId -> { username, display_name, avatar_url, serverId, channelId }
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
@@ -304,24 +509,59 @@ io.on('connection', async (socket) => {
   if (userRows.length === 0) return socket.disconnect();
 
   const user = userRows[0];
-  users.set(socket.userId, {
-    username: user.username,
-    display_name: user.display_name || user.username,
-    avatar_url: user.avatar_url
+
+  socket.on('join', async (data) => {
+    const { serverId, channelId } = data;
+    
+    // Verify access
+    const access = await sql`
+      SELECT 1 FROM channels c
+      JOIN server_members sm ON c.server_id = sm.server_id
+      WHERE c.id = ${channelId} AND c.server_id = ${serverId} AND sm.user_id = ${socket.userId}
+    `;
+    if (access.length === 0) return;
+
+    // Leave previous rooms
+    if (socket.currentRoom) {
+      socket.leave(socket.currentRoom);
+    }
+
+    // Join new room
+    const roomName = `server:${serverId}:channel:${channelId}`;
+    socket.join(roomName);
+    socket.currentRoom = roomName;
+    socket.serverId = serverId;
+    socket.channelId = channelId;
+
+    // Update user presence
+    users.set(socket.userId, {
+      username: user.username,
+      display_name: user.display_name || user.username,
+      avatar_url: user.avatar_url,
+      serverId,
+      channelId
+    });
+
+    // Broadcast online users for this server
+    const serverMembers = Array.from(users.values()).filter(u => u.serverId === serverId);
+    io.to(`server:${serverId}`).emit('online', serverMembers);
   });
 
-  io.emit('online', Array.from(users.values()));
+  socket.on('join_server', (serverId) => {
+    socket.join(`server:${serverId}`);
+  });
 
   socket.on('message', async (data) => {
     if (!data.content || data.content.length > 2000) return;
+    if (!socket.channelId) return;
 
     const result = await sql`
-      INSERT INTO messages (user_id, content)
-      VALUES (${socket.userId}, ${data.content})
+      INSERT INTO messages (user_id, channel_id, content)
+      VALUES (${socket.userId}, ${socket.channelId}, ${data.content})
       RETURNING id, content, created_at
     `;
 
-    io.emit('message', {
+    io.to(socket.currentRoom).emit('message', {
       id: result[0].id,
       content: result[0].content,
       created_at: result[0].created_at,
@@ -332,16 +572,18 @@ io.on('connection', async (socket) => {
     });
 
     await redis.del(`typing:${socket.userId}`);
-    io.emit('typing', { userId: socket.userId, typing: false });
+    io.to(socket.currentRoom).emit('typing', { userId: socket.userId, typing: false });
   });
 
   socket.on('typing', async (typing) => {
+    if (!socket.currentRoom) return;
+    
     if (typing) {
       await redis.setex(`typing:${socket.userId}`, 5, user.display_name || user.username);
     } else {
       await redis.del(`typing:${socket.userId}`);
     }
-    socket.broadcast.emit('typing', { 
+    socket.to(socket.currentRoom).emit('typing', { 
       username: user.display_name || user.username, 
       typing 
     });
@@ -350,7 +592,10 @@ io.on('connection', async (socket) => {
   socket.on('disconnect', async () => {
     users.delete(socket.userId);
     await redis.del(`typing:${socket.userId}`);
-    io.emit('online', Array.from(users.values()));
+    if (socket.serverId) {
+      const serverMembers = Array.from(users.values()).filter(u => u.serverId === socket.serverId);
+      io.to(`server:${socket.serverId}`).emit('online', serverMembers);
+    }
   });
 });
 
