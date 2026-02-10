@@ -6,7 +6,6 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { neon } from '@neondatabase/serverless';
 import Redis from 'ioredis';
-import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -23,10 +22,6 @@ const io = new Server(server, {
 
 const sql = neon(process.env.DATABASE_URL);
 const redis = new Redis(process.env.REDIS_URL);
-
-const mailerSend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY,
-});
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -66,22 +61,6 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
-
-const sendEmail = async (email, code) => {
-  const sentFrom = new Sender(process.env.MAILERSEND_FROM_EMAIL || 'onboarding@yourdomain.com', 'outlet');
-  const recipients = [new Recipient(email)];
-  
-  const emailParams = new EmailParams()
-    .setFrom(sentFrom)
-    .setTo(recipients)
-    .setSubject('outlet - verify your email')
-    .setText(`your verification code is: ${code}\n\nthis code expires in 10 minutes.`)
-    .setHtml(`<p>your verification code is: <strong>${code}</strong></p><p>this code expires in 10 minutes.</p>`);
-
-  await mailerSend.email.send(emailParams);
-};
-
 app.post('/api/register', async (req, res) => {
   try {
     const { email, username, password } = req.body;
@@ -104,43 +83,12 @@ app.post('/api/register', async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 10);
-    const code = genCode();
-    
-    await redis.setex(`verify:${email}`, 600, code);
-    await redis.setex(`pending:${email}`, 600, JSON.stringify({ username, hash }));
-
-    await sendEmail(email, code);
-
-    res.json({ message: 'verification code sent' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'server error' });
-  }
-});
-
-app.post('/api/verify', async (req, res) => {
-  try {
-    const { email, code } = req.body;
-
-    const stored = await redis.get(`verify:${email}`);
-    if (!stored || stored !== code) {
-      return res.status(400).json({ error: 'invalid or expired code' });
-    }
-
-    const data = await redis.get(`pending:${email}`);
-    if (!data) {
-      return res.status(400).json({ error: 'registration expired' });
-    }
-
-    const { username, hash } = JSON.parse(data);
 
     const result = await sql`
       INSERT INTO users (email, username, password_hash, verified, display_name)
       VALUES (${email}, ${username}, ${hash}, true, ${username})
       RETURNING id, email, username, display_name, avatar_url, bio, theme
     `;
-
-    await redis.del(`verify:${email}`, `pending:${email}`);
 
     const token = jwt.sign({ id: result[0].id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
@@ -162,10 +110,6 @@ app.post('/api/login', async (req, res) => {
 
     const user = users[0];
 
-    if (!user.verified) {
-      return res.status(401).json({ error: 'email not verified' });
-    }
-
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'invalid credentials' });
@@ -185,27 +129,6 @@ app.post('/api/login', async (req, res) => {
         theme: user.theme || 'dark'
       } 
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'server error' });
-  }
-});
-
-app.post('/api/resend', async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const data = await redis.get(`pending:${email}`);
-    if (!data) {
-      return res.status(400).json({ error: 'no pending registration' });
-    }
-
-    const code = genCode();
-    await redis.setex(`verify:${email}`, 600, code);
-
-    await sendEmail(email, code);
-
-    res.json({ message: 'code resent' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'server error' });
