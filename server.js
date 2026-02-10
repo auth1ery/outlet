@@ -9,6 +9,8 @@ import Redis from 'ioredis';
 import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import multer from 'multer';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -22,6 +24,15 @@ const io = new Server(server, {
 const sql = neon(process.env.DATABASE_URL);
 const redis = new Redis(process.env.REDIS_URL);
 
+const s3Client = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT || 'https://s3.us-west-004.backblazeb2.com',
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
+  }
+});
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
@@ -31,9 +42,34 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('only images allowed'));
+    }
+  }
+});
+
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(join(__dirname, 'public')));
+
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'unauthorized' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.id;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'unauthorized' });
+  }
+};
 
 const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -99,9 +135,9 @@ app.post('/api/verify', async (req, res) => {
     const { username, hash } = JSON.parse(data);
 
     const result = await sql`
-      INSERT INTO users (email, username, password_hash, verified)
-      VALUES (${email}, ${username}, ${hash}, true)
-      RETURNING id, email, username
+      INSERT INTO users (email, username, password_hash, verified, display_name)
+      VALUES (${email}, ${username}, ${hash}, true, ${username})
+      RETURNING id, email, username, display_name, avatar_url, bio, theme
     `;
 
     await redis.del(`verify:${email}`, `pending:${email}`);
@@ -142,7 +178,11 @@ app.post('/api/login', async (req, res) => {
       user: { 
         id: user.id, 
         email: user.email, 
-        username: user.username 
+        username: user.username,
+        display_name: user.display_name || user.username,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        theme: user.theme || 'dark'
       } 
     });
   } catch (err) {
@@ -180,7 +220,7 @@ app.get('/api/messages', async (req, res) => {
     jwt.verify(token, process.env.JWT_SECRET);
 
     const messages = await sql`
-      SELECT m.id, m.content, m.created_at, u.username, u.id as user_id
+      SELECT m.id, m.content, m.created_at, u.username, u.display_name, u.avatar_url, u.id as user_id
       FROM messages m
       JOIN users u ON m.user_id = u.id
       ORDER BY m.created_at DESC
@@ -188,6 +228,99 @@ app.get('/api/messages', async (req, res) => {
     `;
 
     res.json(messages.reverse());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.get('/api/profile', authMiddleware, async (req, res) => {
+  try {
+    const users = await sql`
+      SELECT id, email, username, display_name, avatar_url, bio, theme, created_at
+      FROM users WHERE id = ${req.userId}
+    `;
+    
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'user not found' });
+    }
+
+    res.json(users[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.put('/api/profile', authMiddleware, async (req, res) => {
+  try {
+    const { display_name, bio, theme } = req.body;
+
+    const updates = {};
+    if (display_name !== undefined) {
+      if (display_name.length < 1 || display_name.length > 32) {
+        return res.status(400).json({ error: 'display name must be 1-32 characters' });
+      }
+      updates.display_name = display_name;
+    }
+    if (bio !== undefined) {
+      if (bio.length > 200) {
+        return res.status(400).json({ error: 'bio must be under 200 characters' });
+      }
+      updates.bio = bio;
+    }
+    if (theme !== undefined) {
+      if (!['dark', 'light', 'midnight', 'ocean'].includes(theme)) {
+        return res.status(400).json({ error: 'invalid theme' });
+      }
+      updates.theme = theme;
+    }
+
+    const result = await sql`
+      UPDATE users 
+      SET display_name = COALESCE(${updates.display_name}, display_name),
+          bio = COALESCE(${updates.bio}, bio),
+          theme = COALESCE(${updates.theme}, theme)
+      WHERE id = ${req.userId}
+      RETURNING id, email, username, display_name, avatar_url, bio, theme
+    `;
+
+    res.json(result[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/api/profile/avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'no file uploaded' });
+    }
+
+    const fileExt = req.file.originalname.split('.').pop();
+    const fileName = `avatars/${req.userId}-${Date.now()}.${fileExt}`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: fileName,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+      ACL: 'public-read'
+    });
+
+    await s3Client.send(command);
+
+    const avatarUrl = `${process.env.R2_PUBLIC_URL}/${fileName}`;
+
+    const result = await sql`
+      UPDATE users 
+      SET avatar_url = ${avatarUrl}
+      WHERE id = ${req.userId}
+      RETURNING id, email, username, display_name, avatar_url, bio, theme
+    `;
+
+    res.json(result[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'server error' });
@@ -210,11 +343,18 @@ io.use((socket, next) => {
 });
 
 io.on('connection', async (socket) => {
-  const userRows = await sql`SELECT id, username FROM users WHERE id = ${socket.userId}`;
+  const userRows = await sql`
+    SELECT id, username, display_name, avatar_url 
+    FROM users WHERE id = ${socket.userId}
+  `;
   if (userRows.length === 0) return socket.disconnect();
 
   const user = userRows[0];
-  users.set(socket.userId, user.username);
+  users.set(socket.userId, {
+    username: user.username,
+    display_name: user.display_name || user.username,
+    avatar_url: user.avatar_url
+  });
 
   io.emit('online', Array.from(users.values()));
 
@@ -232,6 +372,8 @@ io.on('connection', async (socket) => {
       content: result[0].content,
       created_at: result[0].created_at,
       username: user.username,
+      display_name: user.display_name || user.username,
+      avatar_url: user.avatar_url,
       user_id: socket.userId
     });
 
@@ -241,11 +383,14 @@ io.on('connection', async (socket) => {
 
   socket.on('typing', async (typing) => {
     if (typing) {
-      await redis.setex(`typing:${socket.userId}`, 5, user.username);
+      await redis.setex(`typing:${socket.userId}`, 5, user.display_name || user.username);
     } else {
       await redis.del(`typing:${socket.userId}`);
     }
-    socket.broadcast.emit('typing', { username: user.username, typing });
+    socket.broadcast.emit('typing', { 
+      username: user.display_name || user.username, 
+      typing 
+    });
   });
 
   socket.on('disconnect', async () => {
