@@ -5,48 +5,128 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>outlet</title>
   <style>
+    :root[data-theme="dark"] {
+      --bg-primary: #36393f;
+      --bg-secondary: #2f3136;
+      --bg-tertiary: #202225;
+      --bg-input: #40444b;
+      --text-primary: #dcddde;
+      --text-secondary: #b9bbbe;
+      --text-muted: #72767d;
+      --accent: #5865f2;
+      --accent-hover: #4752c4;
+      --online: #3ba55d;
+      --error: #f04747;
+      --success: #43b581;
+    }
+    :root[data-theme="light"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f2f3f5;
+      --bg-tertiary: #e3e5e8;
+      --bg-input: #e3e5e8;
+      --text-primary: #2e3338;
+      --text-secondary: #4e5058;
+      --text-muted: #80848e;
+      --accent: #5865f2;
+      --accent-hover: #4752c4;
+      --online: #3ba55d;
+      --error: #f23f42;
+      --success: #248046;
+    }
+    :root[data-theme="midnight"] {
+      --bg-primary: #0f1419;
+      --bg-secondary: #15202b;
+      --bg-tertiary: #192734;
+      --bg-input: #253341;
+      --text-primary: #f7f9f9;
+      --text-secondary: #8b98a5;
+      --text-muted: #5b6770;
+      --accent: #1d9bf0;
+      --accent-hover: #1a8cd8;
+      --online: #00ba7c;
+      --error: #f4212e;
+      --success: #00ba7c;
+    }
+    :root[data-theme="ocean"] {
+      --bg-primary: #1a2332;
+      --bg-secondary: #0d1620;
+      --bg-tertiary: #0a0f18;
+      --bg-input: #243447;
+      --text-primary: #e8edf2;
+      --text-secondary: #a1b3c4;
+      --text-muted: #6b7f92;
+      --accent: #4fb3d4;
+      --accent-hover: #3a9cb8;
+      --online: #52e0a0;
+      --error: #ff6b6b;
+      --success: #52e0a0;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #36393f;
-      color: #dcddde;
+      background: var(--bg-primary);
+      color: var(--text-primary);
       overflow: hidden;
+      transition: background-color 0.2s;
     }
     .hidden { display: none !important; }
     .app { display: flex; height: 100vh; }
-    .sidebar { width: 240px; background: #2f3136; display: flex; flex-direction: column; }
-    .sidebar-header { padding: 16px; border-bottom: 1px solid #202225; font-weight: 600; font-size: 14px; }
+    .sidebar { width: 240px; background: var(--bg-secondary); display: flex; flex-direction: column; }
+    .sidebar-header { padding: 16px; border-bottom: 1px solid var(--bg-tertiary); font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
     .sidebar-content { padding: 16px; flex-grow: 1; overflow-y: auto; }
-    .sidebar-footer { padding: 10px; background: #292b2f; display: flex; justify-content: space-between; align-items: center; }
-    .online-header { font-size: 12px; margin-bottom: 8px; color: #8e9297; text-transform: uppercase; }
+    .sidebar-footer { padding: 10px; background: var(--bg-tertiary); display: flex; justify-content: space-between; align-items: center; }
+    .settings-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; font-size: 18px; }
+    .settings-btn:hover { color: var(--text-primary); }
+    .online-header { font-size: 12px; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase; }
     .online-user { padding: 6px 8px; border-radius: 4px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-    .online-dot { width: 8px; height: 8px; border-radius: 50%; background: #3ba55d; }
-    .logout-btn { background: none; border: none; color: #b9bbbe; cursor: pointer; padding: 4px 8px; font-size: 12px; }
+    .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--online); }
+    .logout-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; font-size: 12px; }
+    .logout-btn:hover { color: var(--text-primary); }
     .chat { flex-grow: 1; display: flex; flex-direction: column; }
-    .chat-header { padding: 16px; border-bottom: 1px solid #202225; font-weight: 600; }
+    .chat-header { padding: 16px; border-bottom: 1px solid var(--bg-tertiary); font-weight: 600; }
     .messages { flex-grow: 1; overflow-y: auto; padding: 16px; }
-    .message { margin-bottom: 16px; display: flex; gap: 16px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #5865f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 600; }
-    .message-content { }
+    .message { margin-bottom: 16px; display: flex; gap: 12px; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 600; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .message-content { flex: 1; }
     .message-header { margin-bottom: 4px; }
     .username { font-weight: 500; margin-right: 8px; }
-    .timestamp { font-size: 12px; color: #72767d; }
+    .timestamp { font-size: 12px; color: var(--text-muted); }
     .input-area { padding: 16px; }
-    .typing-indicator { font-size: 12px; color: #b9bbbe; margin-bottom: 8px; min-height: 18px; }
-    .message-input { width: 100%; padding: 12px; background: #40444b; border: none; border-radius: 8px; color: #dcddde; font-size: 14px; outline: none; font-family: inherit; }
+    .typing-indicator { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; min-height: 18px; }
+    .message-input { width: 100%; padding: 12px; background: var(--bg-input); border: none; border-radius: 8px; color: var(--text-primary); font-size: 14px; outline: none; font-family: inherit; }
     .auth-container { width: 100%; display: flex; align-items: center; justify-content: center; }
-    .auth-box { width: 400px; padding: 32px; background: #2f3136; border-radius: 8px; }
+    .auth-box { width: 400px; padding: 32px; background: var(--bg-secondary); border-radius: 8px; }
     .auth-title { margin-bottom: 8px; text-align: center; }
-    .auth-subtitle { margin-bottom: 24px; text-align: center; color: #b9bbbe; }
-    .error { padding: 12px; background: #f04747; border-radius: 4px; margin-bottom: 16px; font-size: 14px; }
-    .success { padding: 12px; background: #43b581; border-radius: 4px; margin-bottom: 16px; font-size: 14px; }
-    .input { width: 100%; padding: 12px; margin-bottom: 16px; background: #202225; border: 1px solid #202225; border-radius: 4px; color: #dcddde; outline: none; font-family: inherit; font-size: 14px; }
-    .btn { width: 100%; padding: 12px; background: #5865f2; border: none; border-radius: 4px; color: white; font-weight: 500; cursor: pointer; margin-bottom: 8px; font-family: inherit; font-size: 14px; }
-    .btn:hover { background: #4752c4; }
-    .btn-link { width: 100%; padding: 12px; background: transparent; border: none; color: #00aff4; cursor: pointer; font-size: 14px; font-family: inherit; }
+    .auth-subtitle { margin-bottom: 24px; text-align: center; color: var(--text-secondary); }
+    .error { padding: 12px; background: var(--error); border-radius: 4px; margin-bottom: 16px; font-size: 14px; color: white; }
+    .success { padding: 12px; background: var(--success); border-radius: 4px; margin-bottom: 16px; font-size: 14px; color: white; }
+    .input { width: 100%; padding: 12px; margin-bottom: 16px; background: var(--bg-tertiary); border: 1px solid var(--bg-tertiary); border-radius: 4px; color: var(--text-primary); outline: none; font-family: inherit; font-size: 14px; }
+    .btn { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 4px; color: white; font-weight: 500; cursor: pointer; margin-bottom: 8px; font-family: inherit; font-size: 14px; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-link { width: 100%; padding: 12px; background: transparent; border: none; color: var(--accent); cursor: pointer; font-size: 14px; font-family: inherit; }
     .btn-link:hover { text-decoration: underline; }
     .code-input { text-align: center; font-size: 24px; letter-spacing: 8px; }
-    .loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 14px; color: #b9bbbe; }
+    .loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 14px; color: var(--text-secondary); }
+    .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: var(--bg-secondary); border-radius: 8px; width: 500px; max-height: 80vh; overflow-y: auto; }
+    .modal-header { padding: 20px; border-bottom: 1px solid var(--bg-tertiary); font-weight: 600; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 24px; }
+    .modal-body { padding: 20px; }
+    .setting-group { margin-bottom: 24px; }
+    .setting-label { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+    .setting-description { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+    .theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .theme-option { padding: 16px; border: 2px solid var(--bg-tertiary); border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
+    .theme-option:hover { border-color: var(--accent); }
+    .theme-option.active { border-color: var(--accent); background: var(--bg-tertiary); }
+    .avatar-upload { display: flex; align-items: center; gap: 16px; }
+    .avatar-preview { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 24px; overflow: hidden; }
+    .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .file-input { display: none; }
+    .upload-btn { padding: 8px 16px; background: var(--accent); border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 14px; }
+    .upload-btn:hover { background: var(--accent-hover); }
+    .user-info { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -97,13 +177,19 @@
 
   <div id="app" class="app hidden">
     <div class="sidebar">
-      <div class="sidebar-header">outlet</div>
+      <div class="sidebar-header">
+        <span>outlet</span>
+        <button class="settings-btn" onclick="openSettings()">⚙</button>
+      </div>
       <div class="sidebar-content">
         <div class="online-header" id="online-count">online — 0</div>
         <div id="online-users"></div>
       </div>
       <div class="sidebar-footer">
-        <div id="current-username"></div>
+        <div>
+          <div id="current-username"></div>
+          <div class="user-info" id="current-email"></div>
+        </div>
         <button class="logout-btn" onclick="logout()">logout</button>
       </div>
     </div>
@@ -119,6 +205,51 @@
     </div>
   </div>
 
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>settings</span>
+        <button class="modal-close" onclick="closeSettings()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <div class="setting-label">profile picture</div>
+          <div class="avatar-upload">
+            <div class="avatar-preview" id="avatar-preview"></div>
+            <div>
+              <input type="file" id="avatar-input" class="file-input" accept="image/*" onchange="uploadAvatar()">
+              <button class="upload-btn" onclick="document.getElementById('avatar-input').click()">choose file</button>
+              <div class="setting-description">max 5MB</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label class="setting-label" for="display-name-input">display name</label>
+          <input type="text" id="display-name-input" class="input" maxlength="32">
+        </div>
+
+        <div class="setting-group">
+          <label class="setting-label" for="bio-input">bio</label>
+          <div class="setting-description">max 200 characters</div>
+          <input type="text" id="bio-input" class="input" maxlength="200">
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-label">theme</div>
+          <div class="theme-grid">
+            <div class="theme-option" data-theme="dark" onclick="selectTheme('dark')">dark</div>
+            <div class="theme-option" data-theme="light" onclick="selectTheme('light')">light</div>
+            <div class="theme-option" data-theme="midnight" onclick="selectTheme('midnight')">midnight</div>
+            <div class="theme-option" data-theme="ocean" onclick="selectTheme('ocean')">ocean</div>
+          </div>
+        </div>
+
+        <button class="btn" onclick="saveSettings()">save changes</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     const API = window.location.origin;
@@ -128,6 +259,7 @@
     let typingUsers = new Set();
     let registerEmail = '';
     let isInitialized = false;
+    let selectedTheme = 'dark';
 
     function showView(viewId) {
       ['loading', 'login', 'register', 'verify', 'app'].forEach(id => {
@@ -154,6 +286,112 @@
     function showRegister() {
       showView('register');
       hideError('register');
+    }
+
+    function setTheme(theme) {
+      selectedTheme = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+      document.querySelectorAll('.theme-option').forEach(el => {
+        el.classList.toggle('active', el.dataset.theme === theme);
+      });
+    }
+
+    function selectTheme(theme) {
+      setTheme(theme);
+    }
+
+    async function openSettings() {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`${API}/api/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const profile = await res.json();
+
+        document.getElementById('display-name-input').value = profile.display_name || '';
+        document.getElementById('bio-input').value = profile.bio || '';
+        setTheme(profile.theme || 'dark');
+        
+        const preview = document.getElementById('avatar-preview');
+        if (profile.avatar_url) {
+          preview.innerHTML = `<img src="${profile.avatar_url}" alt="avatar">`;
+        } else {
+          preview.textContent = (profile.display_name || profile.username)[0].toUpperCase();
+        }
+
+        document.getElementById('settings-modal').classList.remove('hidden');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function closeSettings() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    async function uploadAvatar() {
+      const input = document.getElementById('avatar-input');
+      const file = input.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`${API}/api/profile/avatar`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          const preview = document.getElementById('avatar-preview');
+          preview.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
+          currentUser = data;
+          localStorage.setItem('user', JSON.stringify(data));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function saveSettings() {
+      const token = localStorage.getItem('token');
+      const displayName = document.getElementById('display-name-input').value;
+      const bio = document.getElementById('bio-input').value;
+
+      try {
+        const res = await fetch(`${API}/api/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            display_name: displayName,
+            bio: bio,
+            theme: selectedTheme
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          currentUser = data;
+          localStorage.setItem('user', JSON.stringify(data));
+          document.getElementById('current-username').textContent = data.display_name || data.username;
+          setTheme(data.theme || 'dark');
+          closeSettings();
+          
+          if (socket) {
+            socket.disconnect();
+            initSocket(token);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function resendCode() {
@@ -196,11 +434,17 @@
       const messagesEl = document.getElementById('messages');
       const msgEl = document.createElement('div');
       msgEl.className = 'message';
+      
+      const displayName = msg.display_name || msg.username;
+      const avatarContent = msg.avatar_url 
+        ? `<img src="${msg.avatar_url}" alt="avatar">`
+        : displayName[0].toUpperCase();
+      
       msgEl.innerHTML = `
-        <div class="avatar">${msg.username[0].toUpperCase()}</div>
+        <div class="avatar">${avatarContent}</div>
         <div class="message-content">
           <div class="message-header">
-            <span class="username">${msg.username}</span>
+            <span class="username">${displayName}</span>
             <span class="timestamp">${new Date(msg.created_at).toLocaleTimeString()}</span>
           </div>
           <div>${msg.content}</div>
@@ -216,7 +460,7 @@
       container.innerHTML = users.map(u => `
         <div class="online-user">
           <div class="online-dot"></div>
-          ${u}
+          ${typeof u === 'string' ? u : (u.display_name || u.username)}
         </div>
       `).join('');
     }
@@ -286,7 +530,9 @@
     async function initApp(token, user) {
       try {
         currentUser = user;
-        document.getElementById('current-username').textContent = user.username;
+        document.getElementById('current-username').textContent = user.display_name || user.username;
+        document.getElementById('current-email').textContent = user.email;
+        setTheme(user.theme || 'dark');
         
         initSocket(token);
         await loadMessages(token);
@@ -436,6 +682,7 @@
       }
     }
 
+    setTheme('dark');
     autoLogin();
   </script>
 </body>
