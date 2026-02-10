@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { neon } from '@neondatabase/serverless';
 import Redis from 'ioredis';
-import { Resend } from 'resend';
+import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -24,7 +24,9 @@ const io = new Server(server, {
 const sql = neon(process.env.DATABASE_URL);
 const redis = new Redis(process.env.REDIS_URL);
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
+});
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -67,12 +69,17 @@ const authMiddleware = (req, res, next) => {
 const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const sendEmail = async (email, code) => {
-  await resend.emails.send({
-    from: 'outlet <onboarding@resend.dev>',
-    to: email,
-    subject: 'outlet - verify your email',
-    text: `your verification code is: ${code}\n\nthis code expires in 10 minutes.`
-  });
+  const sentFrom = new Sender(process.env.MAILERSEND_FROM_EMAIL || 'onboarding@yourdomain.com', 'outlet');
+  const recipients = [new Recipient(email)];
+  
+  const emailParams = new EmailParams()
+    .setFrom(sentFrom)
+    .setTo(recipients)
+    .setSubject('outlet - verify your email')
+    .setText(`your verification code is: ${code}\n\nthis code expires in 10 minutes.`)
+    .setHtml(`<p>your verification code is: <strong>${code}</strong></p><p>this code expires in 10 minutes.</p>`);
+
+  await mailerSend.email.send(emailParams);
 };
 
 app.post('/api/register', async (req, res) => {
