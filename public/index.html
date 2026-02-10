@@ -5,685 +5,175 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>outlet</title>
   <style>
-    :root[data-theme="dark"] {
-      --bg-primary: #36393f;
-      --bg-secondary: #2f3136;
-      --bg-tertiary: #202225;
-      --bg-input: #40444b;
-      --text-primary: #dcddde;
-      --text-secondary: #b9bbbe;
-      --text-muted: #72767d;
-      --accent: #5865f2;
-      --accent-hover: #4752c4;
-      --online: #3ba55d;
-      --error: #f04747;
-      --success: #43b581;
-    }
-    :root[data-theme="light"] {
-      --bg-primary: #ffffff;
-      --bg-secondary: #f2f3f5;
-      --bg-tertiary: #e3e5e8;
-      --bg-input: #e3e5e8;
-      --text-primary: #2e3338;
-      --text-secondary: #4e5058;
-      --text-muted: #80848e;
-      --accent: #5865f2;
-      --accent-hover: #4752c4;
-      --online: #3ba55d;
-      --error: #f23f42;
-      --success: #248046;
-    }
-    :root[data-theme="midnight"] {
-      --bg-primary: #0f1419;
-      --bg-secondary: #15202b;
-      --bg-tertiary: #192734;
-      --bg-input: #253341;
-      --text-primary: #f7f9f9;
-      --text-secondary: #8b98a5;
-      --text-muted: #5b6770;
-      --accent: #1d9bf0;
-      --accent-hover: #1a8cd8;
-      --online: #00ba7c;
-      --error: #f4212e;
-      --success: #00ba7c;
-    }
-    :root[data-theme="ocean"] {
-      --bg-primary: #1a2332;
-      --bg-secondary: #0d1620;
-      --bg-tertiary: #0a0f18;
-      --bg-input: #243447;
-      --text-primary: #e8edf2;
-      --text-secondary: #a1b3c4;
-      --text-muted: #6b7f92;
-      --accent: #4fb3d4;
-      --accent-hover: #3a9cb8;
-      --online: #52e0a0;
-      --error: #ff6b6b;
-      --success: #52e0a0;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      overflow: hidden;
-      transition: background-color 0.2s;
-    }
-    .hidden { display: none !important; }
-    .app { display: flex; height: 100vh; }
-    .sidebar { width: 240px; background: var(--bg-secondary); display: flex; flex-direction: column; }
-    .sidebar-header { padding: 16px; border-bottom: 1px solid var(--bg-tertiary); font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
-    .sidebar-content { padding: 16px; flex-grow: 1; overflow-y: auto; }
-    .sidebar-footer { padding: 10px; background: var(--bg-tertiary); display: flex; justify-content: space-between; align-items: center; }
-    .settings-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; font-size: 18px; }
-    .settings-btn:hover { color: var(--text-primary); }
-    .online-header { font-size: 12px; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase; }
-    .online-user { padding: 6px 8px; border-radius: 4px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-    .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--online); }
-    .logout-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; font-size: 12px; }
-    .logout-btn:hover { color: var(--text-primary); }
-    .chat { flex-grow: 1; display: flex; flex-direction: column; }
-    .chat-header { padding: 16px; border-bottom: 1px solid var(--bg-tertiary); font-weight: 600; }
-    .messages { flex-grow: 1; overflow-y: auto; padding: 16px; }
-    .message { margin-bottom: 16px; display: flex; gap: 12px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 600; overflow: hidden; }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .message-content { flex: 1; }
-    .message-header { margin-bottom: 4px; }
-    .username { font-weight: 500; margin-right: 8px; }
-    .timestamp { font-size: 12px; color: var(--text-muted); }
-    .input-area { padding: 16px; }
-    .typing-indicator { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; min-height: 18px; }
-    .message-input { width: 100%; padding: 12px; background: var(--bg-input); border: none; border-radius: 8px; color: var(--text-primary); font-size: 14px; outline: none; font-family: inherit; }
-    .auth-container { width: 100%; display: flex; align-items: center; justify-content: center; }
-    .auth-box { width: 400px; padding: 32px; background: var(--bg-secondary); border-radius: 8px; }
-    .auth-title { margin-bottom: 8px; text-align: center; }
-    .auth-subtitle { margin-bottom: 24px; text-align: center; color: var(--text-secondary); }
-    .error { padding: 12px; background: var(--error); border-radius: 4px; margin-bottom: 16px; font-size: 14px; color: white; }
-    .input { width: 100%; padding: 12px; margin-bottom: 16px; background: var(--bg-tertiary); border: 1px solid var(--bg-tertiary); border-radius: 4px; color: var(--text-primary); outline: none; font-family: inherit; font-size: 14px; }
-    .btn { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 4px; color: white; font-weight: 500; cursor: pointer; margin-bottom: 8px; font-family: inherit; font-size: 14px; }
-    .btn:hover { background: var(--accent-hover); }
-    .btn-link { width: 100%; padding: 12px; background: transparent; border: none; color: var(--accent); cursor: pointer; font-size: 14px; font-family: inherit; }
-    .btn-link:hover { text-decoration: underline; }
-    .loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 14px; color: var(--text-secondary); }
-    .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .modal-content { background: var(--bg-secondary); border-radius: 8px; width: 500px; max-height: 80vh; overflow-y: auto; }
-    .modal-header { padding: 20px; border-bottom: 1px solid var(--bg-tertiary); font-weight: 600; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
-    .modal-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 24px; }
-    .modal-body { padding: 20px; }
-    .setting-group { margin-bottom: 24px; }
-    .setting-label { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
-    .setting-description { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
-    .theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .theme-option { padding: 16px; border: 2px solid var(--bg-tertiary); border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
-    .theme-option:hover { border-color: var(--accent); }
-    .theme-option.active { border-color: var(--accent); background: var(--bg-tertiary); }
-    .avatar-upload { display: flex; align-items: center; gap: 16px; }
-    .avatar-preview { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 24px; overflow: hidden; }
-    .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-    .file-input { display: none; }
-    .upload-btn { padding: 8px 16px; background: var(--accent); border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 14px; }
-    .upload-btn:hover { background: var(--accent-hover); }
-    .user-info { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    :root[data-theme="dark"]{--bg-primary:#36393f;--bg-secondary:#2f3136;--bg-tertiary:#202225;--bg-input:#40444b;--text-primary:#dcddde;--text-secondary:#b9bbbe;--text-muted:#72767d;--accent:#5865f2;--accent-hover:#4752c4;--online:#3ba55d;--error:#f04747;--success:#43b581}
+    :root[data-theme="light"]{--bg-primary:#fff;--bg-secondary:#f2f3f5;--bg-tertiary:#e3e5e8;--bg-input:#e3e5e8;--text-primary:#2e3338;--text-secondary:#4e5058;--text-muted:#80848e;--accent:#5865f2;--accent-hover:#4752c4;--online:#3ba55d;--error:#f23f42;--success:#248046}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);overflow:hidden}
+    .hidden{display:none!important}
+    .auth-container{width:100%;height:100vh;display:flex;align-items:center;justify-content:center}
+    .auth-box{width:400px;padding:32px;background:var(--bg-secondary);border-radius:8px}
+    .auth-title{margin-bottom:8px;text-align:center}
+    .auth-subtitle{margin-bottom:24px;text-align:center;color:var(--text-secondary)}
+    .error{padding:12px;background:var(--error);border-radius:4px;margin-bottom:16px;font-size:14px;color:#fff}
+    .input{width:100%;padding:12px;margin-bottom:16px;background:var(--bg-tertiary);border:1px solid var(--bg-tertiary);border-radius:4px;color:var(--text-primary);outline:0;font-family:inherit;font-size:14px}
+    .btn{width:100%;padding:12px;background:var(--accent);border:none;border-radius:4px;color:#fff;font-weight:500;cursor:pointer;margin-bottom:8px;font-family:inherit;font-size:14px}
+    .btn:hover{background:var(--accent-hover)}
+    .btn-link{width:100%;padding:12px;background:0 0;border:none;color:var(--accent);cursor:pointer;font-size:14px;font-family:inherit}
+    .btn-link:hover{text-decoration:underline}
+    .app{display:flex;height:100vh}
+    .servers{width:60px;background:var(--bg-tertiary);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:8px;overflow-y:auto}
+    .server-icon{width:48px;height:48px;border-radius:50%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:600;font-size:18px;flex-shrink:0;transition:border-radius .2s}
+    .server-icon:hover{border-radius:16px;background:var(--accent)}
+    .server-icon.active{border-radius:16px;background:var(--accent)}
+    .add-server{width:48px;height:48px;border-radius:50%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;color:var(--success);transition:border-radius .2s}
+    .add-server:hover{border-radius:16px;background:var(--success);color:#fff}
+    .channels{width:200px;background:var(--bg-secondary);display:flex;flex-direction:column}
+    .channels-header{padding:16px;border-bottom:1px solid var(--bg-tertiary);font-weight:600;font-size:14px}
+    .channels-list{flex:1;padding:8px;overflow-y:auto}
+    .channel{padding:8px 12px;margin-bottom:2px;border-radius:4px;cursor:pointer;font-size:14px;color:var(--text-secondary)}
+    .channel:hover{background:var(--bg-tertiary);color:var(--text-primary)}
+    .channel.active{background:var(--bg-tertiary);color:var(--text-primary)}
+    .channel::before{content:'# ';color:var(--text-muted)}
+    .add-channel{padding:8px 12px;color:var(--text-muted);cursor:pointer;font-size:14px}
+    .add-channel:hover{color:var(--text-primary)}
+    .channels-footer{padding:10px;background:var(--bg-tertiary);font-size:12px;display:flex;justify-content:space-between;align-items:center}
+    .settings-btn{background:0 0;border:none;color:var(--text-secondary);cursor:pointer;font-size:16px}
+    .settings-btn:hover{color:var(--text-primary)}
+    .members{width:200px;background:var(--bg-secondary);overflow-y:auto}
+    .members-header{padding:12px 16px;font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:600}
+    .member{padding:6px 16px;display:flex;align-items:center;gap:8px;font-size:14px}
+    .member-dot{width:8px;height:8px;border-radius:50%;background:var(--online)}
+    .chat{flex:1;display:flex;flex-direction:column}
+    .chat-header{padding:16px;border-bottom:1px solid var(--bg-tertiary);font-weight:600}
+    .messages{flex:1;overflow-y:auto;padding:16px}
+    .message{margin-bottom:16px;display:flex;gap:12px}
+    .avatar{width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:600;overflow:hidden;font-size:16px}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .message-content{flex:1}
+    .message-header{margin-bottom:4px}
+    .username{font-weight:500;margin-right:8px}
+    .timestamp{font-size:12px;color:var(--text-muted)}
+    .input-area{padding:16px}
+    .typing-indicator{font-size:12px;color:var(--text-secondary);margin-bottom:8px;min-height:18px}
+    .message-input{width:100%;padding:12px;background:var(--bg-input);border:none;border-radius:8px;color:var(--text-primary);font-size:14px;outline:0;font-family:inherit}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:1000}
+    .modal-content{background:var(--bg-secondary);border-radius:8px;width:400px;max-height:80vh;overflow-y:auto}
+    .modal-header{padding:20px;border-bottom:1px solid var(--bg-tertiary);font-weight:600;font-size:18px;display:flex;justify-content:space-between}
+    .modal-close{background:0 0;border:none;color:var(--text-secondary);cursor:pointer;font-size:24px}
+    .modal-body{padding:20px}
+    .modal-label{font-size:14px;font-weight:600;margin-bottom:8px}
+    .modal-btn{width:100%;padding:10px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;margin-top:8px}
+    .modal-btn:hover{background:var(--accent-hover)}
+    .invite-code{background:var(--bg-tertiary);padding:12px;border-radius:4px;font-family:monospace;margin:8px 0;text-align:center;font-size:18px;letter-spacing:2px}
   </style>
 </head>
 <body>
-  <div id="loading" class="loading">loading...</div>
-
-  <div id="login" class="auth-container hidden">
-    <div class="auth-box">
-      <h2 class="auth-title">welcome to outlet</h2>
-      <p class="auth-subtitle">login to continue</p>
-      <div id="login-error" class="error hidden"></div>
-      <form id="login-form">
-        <input type="text" class="input" placeholder="username" id="login-username" required>
-        <input type="password" class="input" placeholder="password" id="login-password" required>
-        <button type="submit" class="btn">login</button>
+<div id="loading" class="auth-container">loading...</div>
+<div id="login" class="auth-container hidden">
+  <div class="auth-box">
+    <h2 class="auth-title">welcome to outlet</h2>
+    <p class="auth-subtitle">login to continue</p>
+    <div id="login-error" class="error hidden"></div>
+    <form id="login-form">
+      <input type="text" class="input" placeholder="username" id="login-username" required>
+      <input type="password" class="input" placeholder="password" id="login-password" required>
+      <button type="submit" class="btn">login</button>
+    </form>
+    <button class="btn-link" onclick="showRegister()">need an account? register</button>
+  </div>
+</div>
+<div id="register" class="auth-container hidden">
+  <div class="auth-box">
+    <h2 class="auth-title">create account</h2>
+    <p class="auth-subtitle">join outlet today</p>
+    <div id="register-error" class="error hidden"></div>
+    <form id="register-form">
+      <input type="text" class="input" placeholder="username" id="register-username" required>
+      <input type="password" class="input" placeholder="password" id="register-password" required>
+      <button type="submit" class="btn">register</button>
+    </form>
+    <button class="btn-link" onclick="showLogin()">already have an account? login</button>
+  </div>
+</div>
+<div id="app" class="app hidden">
+  <div class="servers" id="servers-list"></div>
+  <div class="channels">
+    <div class="channels-header" id="server-name">Select a server</div>
+    <div class="channels-list" id="channels-list"></div>
+    <div class="channels-footer">
+      <span id="current-username"></span>
+      <button class="settings-btn" onclick="openSettings()">⚙</button>
+    </div>
+  </div>
+  <div class="chat">
+    <div class="chat-header" id="channel-name">Select a channel</div>
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <div class="typing-indicator" id="typing"></div>
+      <form id="message-form">
+        <input type="text" class="message-input" placeholder="Message" id="message-input" autocomplete="off">
       </form>
-      <button class="btn-link" onclick="showRegister()">need an account? register</button>
     </div>
   </div>
-
-  <div id="register" class="auth-container hidden">
-    <div class="auth-box">
-      <h2 class="auth-title">create account</h2>
-      <p class="auth-subtitle">join outlet today</p>
-      <div id="register-error" class="error hidden"></div>
-      <form id="register-form">
-        <input type="text" class="input" placeholder="username" id="register-username" required>
-        <input type="password" class="input" placeholder="password" id="register-password" required>
-        <button type="submit" class="btn">register</button>
-      </form>
-      <button class="btn-link" onclick="showLogin()">already have an account? login</button>
+  <div class="members">
+    <div class="members-header">MEMBERS</div>
+    <div id="members-list"></div>
+  </div>
+</div>
+<div id="create-server-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header"><span>Create Server</span><button class="modal-close" onclick="closeCreateServer()">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-label">Server Name</div>
+      <input type="text" id="server-name-input" class="input" placeholder="My Cool Server" maxlength="32">
+      <div id="create-server-error" class="error hidden"></div>
+      <button class="modal-btn" onclick="createServer()">Create</button>
     </div>
   </div>
-
-  <div id="app" class="app hidden">
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <span>outlet</span>
-        <button class="settings-btn" onclick="openSettings()">⚙</button>
-      </div>
-      <div class="sidebar-content">
-        <div class="online-header" id="online-count">online — 0</div>
-        <div id="online-users"></div>
-      </div>
-      <div class="sidebar-footer">
-        <div>
-          <div id="current-username"></div>
-        </div>
-        <button class="logout-btn" onclick="logout()">logout</button>
-      </div>
+</div>
+<div id="join-server-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header"><span>Join Server</span><button class="modal-close" onclick="closeJoinServer()">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-label">Invite Code</div>
+      <input type="text" id="invite-code-input" class="input" placeholder="abc12345" maxlength="8">
+      <div id="join-server-error" class="error hidden"></div>
+      <button class="modal-btn" onclick="joinServer()">Join</button>
     </div>
-    <div class="chat">
-      <div class="chat-header"># general</div>
-      <div class="messages" id="messages"></div>
-      <div class="input-area">
-        <div class="typing-indicator" id="typing"></div>
-        <form id="message-form">
-          <input type="text" class="message-input" placeholder="message #general" id="message-input" autocomplete="off">
-        </form>
+  </div>
+</div>
+<div id="server-settings-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header"><span>Server Settings</span><button class="modal-close" onclick="closeServerSettings()">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-label">Invite Code</div>
+      <div class="invite-code" id="server-invite-code"></div>
+      <button class="modal-btn" onclick="copyInviteCode()">Copy Code</button>
+      <div style="margin-top:24px">
+        <div class="modal-label">Add Channel</div>
+        <input type="text" id="channel-name-input" class="input" placeholder="new-channel" maxlength="32">
+        <div id="add-channel-error" class="error hidden"></div>
+        <button class="modal-btn" onclick="addChannel()">Create Channel</button>
       </div>
     </div>
   </div>
-
-  <div id="settings-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <span>settings</span>
-        <button class="modal-close" onclick="closeSettings()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="setting-group">
-          <div class="setting-label">profile picture</div>
-          <div class="avatar-upload">
-            <div class="avatar-preview" id="avatar-preview"></div>
-            <div>
-              <input type="file" id="avatar-input" class="file-input" accept="image/*" onchange="uploadAvatar()">
-              <button class="upload-btn" onclick="document.getElementById('avatar-input').click()">choose file</button>
-              <div class="setting-description">max 5MB</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="setting-group">
-          <label class="setting-label" for="display-name-input">display name</label>
-          <input type="text" id="display-name-input" class="input" maxlength="32">
-        </div>
-
-        <div class="setting-group">
-          <label class="setting-label" for="bio-input">bio</label>
-          <div class="setting-description">max 200 characters</div>
-          <input type="text" id="bio-input" class="input" maxlength="200">
-        </div>
-
-        <div class="setting-group">
-          <div class="setting-label">theme</div>
-          <div class="theme-grid">
-            <div class="theme-option" data-theme="dark" onclick="selectTheme('dark')">dark</div>
-            <div class="theme-option" data-theme="light" onclick="selectTheme('light')">light</div>
-            <div class="theme-option" data-theme="midnight" onclick="selectTheme('midnight')">midnight</div>
-            <div class="theme-option" data-theme="ocean" onclick="selectTheme('ocean')">ocean</div>
-          </div>
-        </div>
-
-        <button class="btn" onclick="saveSettings()">save changes</button>
-
-        <div class="setting-group" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--bg-tertiary);">
-          <div class="setting-label" style="color: var(--error);">danger zone</div>
-          <div class="setting-description">permanently delete your account and all messages</div>
-          <button class="btn" style="background: var(--error); margin-top: 12px;" onclick="showDeleteConfirm()">delete account</button>
-        </div>
-      </div>
+</div>
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header"><span>Settings</span><button class="modal-close" onclick="closeSettings()">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-label">Display Name</div>
+      <input type="text" id="display-name-input" class="input" maxlength="32">
+      <div class="modal-label" style="margin-top:16px">Bio</div>
+      <input type="text" id="bio-input" class="input" maxlength="200">
+      <button class="modal-btn" onclick="saveSettings()">Save</button>
+      <button class="modal-btn" style="background:var(--error);margin-top:8px" onclick="logout()">Logout</button>
     </div>
   </div>
-
-  <div id="delete-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <span style="color: var(--error);">delete account</span>
-        <button class="modal-close" onclick="closeDeleteConfirm()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="setting-description" style="margin-bottom: 20px;">
-          this action cannot be undone. all your messages and data will be permanently deleted.
-        </div>
-        <div class="setting-label">type the following to confirm:</div>
-        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 4px; margin: 12px 0; font-family: monospace; font-size: 14px;" id="delete-confirmation-text">
-          sudo delete account <span id="delete-username-display"></span>
-        </div>
-        <input type="text" id="delete-confirmation-input" class="input" placeholder="type confirmation here" autocomplete="off">
-        <div id="delete-error" class="error hidden"></div>
-        <button class="btn" style="background: var(--error);" onclick="confirmDelete()">permanently delete account</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script>
-    const API = window.location.origin;
-    let socket = null;
-    let currentUser = null;
-    let typingTimeout = null;
-    let typingUsers = new Set();
-    let isInitialized = false;
-    let selectedTheme = 'dark';
-
-    function showView(viewId) {
-      ['loading', 'login', 'register', 'app'].forEach(id => {
-        document.getElementById(id).classList.add('hidden');
-      });
-      document.getElementById(viewId).classList.remove('hidden');
-    }
-
-    function showError(formId, message) {
-      const errorEl = document.getElementById(`${formId}-error`);
-      errorEl.textContent = message;
-      errorEl.classList.remove('hidden');
-    }
-
-    function hideError(formId) {
-      document.getElementById(`${formId}-error`).classList.add('hidden');
-    }
-
-    function showLogin() {
-      showView('login');
-      hideError('login');
-    }
-
-    function showRegister() {
-      showView('register');
-      hideError('register');
-    }
-
-    function setTheme(theme) {
-      selectedTheme = theme;
-      document.documentElement.setAttribute('data-theme', theme);
-      document.querySelectorAll('.theme-option').forEach(el => {
-        el.classList.toggle('active', el.dataset.theme === theme);
-      });
-    }
-
-    function selectTheme(theme) {
-      setTheme(theme);
-    }
-
-    async function openSettings() {
-      const token = localStorage.getItem('token');
-      try {
-        const res = await fetch(`${API}/api/profile`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const profile = await res.json();
-
-        document.getElementById('display-name-input').value = profile.display_name || '';
-        document.getElementById('bio-input').value = profile.bio || '';
-        setTheme(profile.theme || 'dark');
-        
-        const preview = document.getElementById('avatar-preview');
-        if (profile.avatar_url) {
-          preview.innerHTML = `<img src="${profile.avatar_url}" alt="avatar">`;
-        } else {
-          preview.textContent = (profile.display_name || profile.username)[0].toUpperCase();
-        }
-
-        document.getElementById('settings-modal').classList.remove('hidden');
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    function closeSettings() {
-      document.getElementById('settings-modal').classList.add('hidden');
-    }
-
-    function showDeleteConfirm() {
-      document.getElementById('delete-username-display').textContent = currentUser.username;
-      document.getElementById('delete-confirmation-input').value = '';
-      document.getElementById('delete-error').classList.add('hidden');
-      document.getElementById('settings-modal').classList.add('hidden');
-      document.getElementById('delete-modal').classList.remove('hidden');
-    }
-
-    function closeDeleteConfirm() {
-      document.getElementById('delete-modal').classList.add('hidden');
-      document.getElementById('settings-modal').classList.remove('hidden');
-    }
-
-    async function confirmDelete() {
-      const confirmation = document.getElementById('delete-confirmation-input').value;
-      const token = localStorage.getItem('token');
-
-      try {
-        const res = await fetch(`${API}/api/account`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ confirmation })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          alert('account deleted successfully');
-          logout();
-        } else {
-          const errorEl = document.getElementById('delete-error');
-          errorEl.textContent = data.error;
-          errorEl.classList.remove('hidden');
-        }
-      } catch (err) {
-        const errorEl = document.getElementById('delete-error');
-        errorEl.textContent = 'server error';
-        errorEl.classList.remove('hidden');
-      }
-    }
-
-    async function uploadAvatar() {
-      const input = document.getElementById('avatar-input');
-      const file = input.files[0];
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append('avatar', file);
-
-      const token = localStorage.getItem('token');
-      try {
-        const res = await fetch(`${API}/api/profile/avatar`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          const preview = document.getElementById('avatar-preview');
-          preview.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
-          currentUser = data;
-          localStorage.setItem('user', JSON.stringify(data));
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    async function saveSettings() {
-      const token = localStorage.getItem('token');
-      const displayName = document.getElementById('display-name-input').value;
-      const bio = document.getElementById('bio-input').value;
-
-      try {
-        const res = await fetch(`${API}/api/profile`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            display_name: displayName,
-            bio: bio,
-            theme: selectedTheme
-          })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          currentUser = data;
-          localStorage.setItem('user', JSON.stringify(data));
-          document.getElementById('current-username').textContent = data.display_name || data.username;
-          setTheme(data.theme || 'dark');
-          closeSettings();
-          
-          if (socket) {
-            socket.disconnect();
-            initSocket(token);
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    function logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (socket) {
-        socket.disconnect();
-        socket = null;
-      }
-      currentUser = null;
-      typingUsers.clear();
-      document.getElementById('messages').innerHTML = '';
-      showLogin();
-    }
-
-    function addMessage(msg) {
-      const messagesEl = document.getElementById('messages');
-      const msgEl = document.createElement('div');
-      msgEl.className = 'message';
-      
-      const displayName = msg.display_name || msg.username;
-      const avatarContent = msg.avatar_url 
-        ? `<img src="${msg.avatar_url}" alt="avatar">`
-        : displayName[0].toUpperCase();
-      
-      msgEl.innerHTML = `
-        <div class="avatar">${avatarContent}</div>
-        <div class="message-content">
-          <div class="message-header">
-            <span class="username">${displayName}</span>
-            <span class="timestamp">${new Date(msg.created_at).toLocaleTimeString()}</span>
-          </div>
-          <div>${msg.content}</div>
-        </div>
-      `;
-      messagesEl.appendChild(msgEl);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    function updateOnlineUsers(users) {
-      document.getElementById('online-count').textContent = `online — ${users.length}`;
-      const container = document.getElementById('online-users');
-      container.innerHTML = users.map(u => `
-        <div class="online-user">
-          <div class="online-dot"></div>
-          ${typeof u === 'string' ? u : (u.display_name || u.username)}
-        </div>
-      `).join('');
-    }
-
-    function updateTyping() {
-      const typingEl = document.getElementById('typing');
-      if (typingUsers.size === 0) {
-        typingEl.textContent = '';
-        return;
-      }
-      const names = Array.from(typingUsers).join(', ');
-      typingEl.textContent = `${names} ${typingUsers.size === 1 ? 'is' : 'are'} typing...`;
-    }
-
-    function initSocket(token) {
-      if (socket) {
-        socket.disconnect();
-      }
-
-      socket = io(API, {
-        auth: { token },
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5
-      });
-
-      socket.on('connect', () => {
-        console.log('connected');
-      });
-
-      socket.on('disconnect', () => {
-        console.log('disconnected');
-      });
-
-      socket.on('message', addMessage);
-
-      socket.on('online', updateOnlineUsers);
-
-      socket.on('typing', (data) => {
-        if (data.typing) {
-          typingUsers.add(data.username);
-        } else {
-          typingUsers.delete(data.username);
-        }
-        updateTyping();
-      });
-    }
-
-    async function loadMessages(token) {
-      try {
-        const res = await fetch(`${API}/api/messages`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (!res.ok) {
-          throw new Error('failed to load messages');
-        }
-        
-        const messages = await res.json();
-        messages.forEach(addMessage);
-      } catch (err) {
-        console.error('load messages error:', err);
-      }
-    }
-
-    async function initApp(token, user) {
-      try {
-        currentUser = user;
-        document.getElementById('current-username').textContent = user.display_name || user.username;
-        setTheme(user.theme || 'dark');
-        
-        initSocket(token);
-        await loadMessages(token);
-        
-        showView('app');
-        isInitialized = true;
-      } catch (err) {
-        console.error('init error:', err);
-        logout();
-      }
-    }
-
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideError('login');
-
-      const username = document.getElementById('login-username').value;
-      const password = document.getElementById('login-password').value;
-
-      try {
-        const res = await fetch(`${API}/api/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          await initApp(data.token, data.user);
-        } else {
-          showError('login', data.error);
-        }
-      } catch (err) {
-        showError('login', 'server error');
-      }
-    });
-
-    document.getElementById('register-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideError('register');
-
-      const username = document.getElementById('register-username').value;
-      const password = document.getElementById('register-password').value;
-
-      try {
-        const res = await fetch(`${API}/api/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          await initApp(data.token, data.user);
-        } else {
-          showError('register', data.error);
-        }
-      } catch (err) {
-        showError('register', 'server error');
-      }
-    });
-
-    document.getElementById('message-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const input = document.getElementById('message-input');
-      const content = input.value.trim();
-
-      if (!content || !socket) return;
-
-      socket.emit('message', { content });
-      input.value = '';
-      socket.emit('typing', false);
-    });
-
-    document.getElementById('message-input').addEventListener('input', (e) => {
-      if (!socket) return;
-
-      socket.emit('typing', true);
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => {
-        socket.emit('typing', false);
-      }, 1000);
-    });
-
-    async function autoLogin() {
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      
-      if (!token || !userStr) {
-        showLogin();
-        return;
-      }
-
-      try {
-        const user = JSON.parse(userStr);
-        
-        const res = await fetch(`${API}/api/messages`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (res.ok) {
-          await initApp(token, user);
-        } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          showLogin();
-        }
-      } catch (err) {
-        console.error('auto login error:', err);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        showLogin();
-      }
-    }
-
-    setTheme('dark');
-    autoLogin();
-  </script>
+</div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const API=window.location.origin;let socket=null,currentUser=null,currentServer=null,currentChannel=null,servers=[],channels=[],typingTimeout=null,typingUsers=new Set();function showView(e){["loading","login","register","app"].forEach(e=>{document.getElementById(e).classList.add("hidden")}),document.getElementById(e).classList.remove("hidden")}function showError(e,t){const n=document.getElementById(`${e}-error`);n.textContent=t,n.classList.remove("hidden")}function hideError(e){const t=document.getElementById(`${e}-error`);t&&t.classList.add("hidden")}function showLogin(){showView("login"),hideError("login")}function showRegister(){showView("register"),hideError("register")}function logout(){localStorage.removeItem("token"),localStorage.removeItem("user"),socket&&socket.disconnect(),showLogin()}async function loadServers(){const e=localStorage.getItem("token"),t=await fetch(`${API}/api/servers`,{headers:{Authorization:`Bearer ${e}`}});servers=await t.json();const n=document.getElementById("servers-list");n.innerHTML=servers.map(e=>`<div class="server-icon ${e.id===currentServer?.id?"active":""}" onclick="selectServer(${e.id})">${e.name[0].toUpperCase()}</div>`).join("")+'<div class="add-server" onclick="showServerOptions()">+</div>',!currentServer&&servers.length>0&&selectServer(servers[0].id)}function showServerOptions(){confirm("Create new server? (Cancel to join existing)")?document.getElementById("create-server-modal").classList.remove("hidden"):document.getElementById("join-server-modal").classList.remove("hidden")}function closeCreateServer(){document.getElementById("create-server-modal").classList.add("hidden"),hideError("create-server")}function closeJoinServer(){document.getElementById("join-server-modal").classList.add("hidden"),hideError("join-server")}async function createServer(){const e=document.getElementById("server-name-input").value.trim();if(!e)return showError("create-server","Server name required");const t=localStorage.getItem("token"),n=await fetch(`${API}/api/servers`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${t}`},body:JSON.stringify({name:e})}),o=await n.json();n.ok?(closeCreateServer(),await loadServers(),selectServer(o.id)):showError("create-server",o.error)}async function joinServer(){const e=document.getElementById("invite-code-input").value.trim();if(!e)return showError("join-server","Invite code required");const t=localStorage.getItem("token"),n=await fetch(`${API}/api/servers/join`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${t}`},body:JSON.stringify({inviteCode:e})}),o=await n.json();n.ok?(closeJoinServer(),await loadServers(),selectServer(o.id)):showError("join-server",o.error)}async function selectServer(e){if(currentServer=servers.find(t=>t.id===e),!currentServer)return;document.getElementById("server-name").textContent=currentServer.name,document.querySelectorAll(".server-icon").forEach(e=>e.classList.remove("active")),event?.target?.classList.add("active");const t=localStorage.getItem("token"),n=await fetch(`${API}/api/servers/${e}/channels`,{headers:{Authorization:`Bearer ${t}`}});channels=await n.json();const o=document.getElementById("channels-list");o.innerHTML=channels.map(e=>`<div class="channel ${e.id===currentChannel?.id?"active":""}" onclick="selectChannel(${e.id})">${e.name}</div>`).join(""),currentServer.owner_id===currentUser.id&&(o.innerHTML+='<div class="add-channel" onclick="openServerSettings()">+ Add Channel</div>'),await loadMembers(e),socket.emit("join_server",e),channels.length>0&&selectChannel(channels[0].id)}async function loadMembers(e){const t=localStorage.getItem("token"),n=await fetch(`${API}/api/servers/${e}/members`,{headers:{Authorization:`Bearer ${t}`}}),o=await n.json();document.getElementById("members-list").innerHTML=o.map(e=>`<div class="member"><div class="member-dot"></div>${e.display_name||e.username}</div>`).join("")}async function selectChannel(e){if(currentChannel=channels.find(t=>t.id===e),!currentChannel)return;document.getElementById("channel-name").textContent=`# ${currentChannel.name}`,document.querySelectorAll(".channel").forEach(e=>e.classList.remove("active")),event?.target?.classList.add("active"),document.getElementById("messages").innerHTML="";const t=localStorage.getItem("token"),n=await fetch(`${API}/api/channels/${e}/messages`,{headers:{Authorization:`Bearer ${t}`}});(await n.json()).forEach(addMessage),socket.emit("join",{serverId:currentServer.id,channelId:e})}function openServerSettings(){currentServer.owner_id===currentUser.id&&(document.getElementById("server-invite-code").textContent=currentServer.invite_code,document.getElementById("server-settings-modal").classList.remove("hidden"))}function closeServerSettings(){document.getElementById("server-settings-modal").classList.add("hidden"),hideError("add-channel")}function copyInviteCode(){navigator.clipboard.writeText(currentServer.invite_code),alert("Invite code copied!")}async function addChannel(){const e=document.getElementById("channel-name-input").value.trim();if(!e)return showError("add-channel","Channel name required");const t=localStorage.getItem("token"),n=await fetch(`${API}/api/servers/${currentServer.id}/channels`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${t}`},body:JSON.stringify({name:e})}),o=await n.json();n.ok?(closeServerSettings(),selectServer(currentServer.id)):showError("add-channel",o.error)}function openSettings(){document.getElementById("display-name-input").value=currentUser.display_name||"",document.getElementById("bio-input").value=currentUser.bio||"",document.getElementById("settings-modal").classList.remove("hidden")}function closeSettings(){document.getElementById("settings-modal").classList.add("hidden")}async function saveSettings(){const e=localStorage.getItem("token"),t=await fetch(`${API}/api/profile`,{method:"PUT",headers:{"Content-Type":"application/json",Authorization:`Bearer ${e}`},body:JSON.stringify({display_name:document.getElementById("display-name-input").value,bio:document.getElementById("bio-input").value})});if(t.ok){const e=await t.json();currentUser=e,localStorage.setItem("user",JSON.stringify(e)),document.getElementById("current-username").textContent=e.display_name||e.username,closeSettings()}}function addMessage(e){const t=document.getElementById("messages"),n=document.createElement("div");n.className="message";const o=e.display_name||e.username,r=e.avatar_url?`<img src="${e.avatar_url}" alt="avatar">`:o[0].toUpperCase();n.innerHTML=`<div class="avatar">${r}</div><div class="message-content"><div class="message-header"><span class="username">${o}</span><span class="timestamp">${new Date(e.created_at).toLocaleTimeString()}</span></div><div>${e.content}</div></div>`,t.appendChild(n),t.scrollTop=t.scrollHeight}function updateTyping(){const e=document.getElementById("typing");if(0===typingUsers.size)return void(e.textContent="");const t=Array.from(typingUsers).join(", ");e.textContent=`${t} ${1===typingUsers.size?"is":"are"} typing...`}function initSocket(e){socket=io(API,{auth:{token:e},transports:["websocket","polling"]}),socket.on("message",addMessage),socket.on("online",e=>{document.getElementById("members-list").innerHTML=e.map(e=>`<div class="member"><div class="member-dot"></div>${e.display_name||e.username}</div>`).join("")}),socket.on("typing",e=>{e.typing?typingUsers.add(e.username):typingUsers.delete(e.username),updateTyping()})}async function initApp(e,t){currentUser=t,document.getElementById("current-username").textContent=t.display_name||t.username,initSocket(e),await loadServers(),showView("app")}document.getElementById("login-form").addEventListener("submit",async e=>{e.preventDefault(),hideError("login");const t=document.getElementById("login-username").value,n=document.getElementById("login-password").value,o=await fetch(`${API}/api/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:t,password:n})}),r=await o.json();o.ok?(localStorage.setItem("token",r.token),localStorage.setItem("user",JSON.stringify(r.user)),await initApp(r.token,r.user)):showError("login",r.error)}),document.getElementById("register-form").addEventListener("submit",async e=>{e.preventDefault(),hideError("register");const t=document.getElementById("register-username").value,n=document.getElementById("register-password").value,o=await fetch(`${API}/api/register`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:t,password:n})}),r=await o.json();o.ok?(localStorage.setItem("token",r.token),localStorage.setItem("user",JSON.stringify(r.user)),await initApp(r.token,r.user)):showError("register",r.error)}),document.getElementById("message-form").addEventListener("submit",e=>{e.preventDefault();const t=document.getElementById("message-input"),n=t.value.trim();n&&socket&&(socket.emit("message",{content:n}),t.value="",socket.emit("typing",!1))}),document.getElementById("message-input").addEventListener("input",()=>{socket&&(socket.emit("typing",!0),clearTimeout(typingTimeout),typingTimeout=setTimeout(()=>{socket.emit("typing",!1)},1e3))}),async function(){const e=localStorage.getItem("token"),t=localStorage.getItem("user");if(!e||!t)return showLogin();try{await initApp(e,JSON.parse(t))}catch(e){console.error(e),showLogin()}}();
+</script>
 </body>
 </html>
