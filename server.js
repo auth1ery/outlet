@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { neon } from '@neondatabase/serverless';
 import Redis from 'ioredis';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -24,21 +24,14 @@ const io = new Server(server, {
 const sql = neon(process.env.DATABASE_URL);
 const redis = new Redis(process.env.REDIS_URL);
 
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 const s3Client = new S3Client({
   region: 'auto',
   endpoint: process.env.R2_ENDPOINT || 'https://s3.us-west-004.backblazeb2.com',
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
-  }
-});
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
   }
 });
 
@@ -74,8 +67,8 @@ const authMiddleware = (req, res, next) => {
 const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const sendEmail = async (email, code) => {
-  await transporter.sendMail({
-    from: process.env.FROM_EMAIL,
+  await resend.emails.send({
+    from: 'outlet <onboarding@resend.dev>',
     to: email,
     subject: 'outlet - verify your email',
     text: `your verification code is: ${code}\n\nthis code expires in 10 minutes.`
