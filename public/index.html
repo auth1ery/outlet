@@ -228,6 +228,33 @@
         </div>
 
         <button class="btn" onclick="saveSettings()">save changes</button>
+
+        <div class="setting-group" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--bg-tertiary);">
+          <div class="setting-label" style="color: var(--error);">danger zone</div>
+          <div class="setting-description">permanently delete your account and all messages</div>
+          <button class="btn" style="background: var(--error); margin-top: 12px;" onclick="showDeleteConfirm()">delete account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span style="color: var(--error);">delete account</span>
+        <button class="modal-close" onclick="closeDeleteConfirm()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-description" style="margin-bottom: 20px;">
+          this action cannot be undone. all your messages and data will be permanently deleted.
+        </div>
+        <div class="setting-label">type the following to confirm:</div>
+        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 4px; margin: 12px 0; font-family: monospace; font-size: 14px;" id="delete-confirmation-text">
+          sudo delete account <span id="delete-username-display"></span>
+        </div>
+        <input type="text" id="delete-confirmation-input" class="input" placeholder="type confirmation here" autocomplete="off">
+        <div id="delete-error" class="error hidden"></div>
+        <button class="btn" style="background: var(--error);" onclick="confirmDelete()">permanently delete account</button>
       </div>
     </div>
   </div>
@@ -308,6 +335,50 @@
 
     function closeSettings() {
       document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    function showDeleteConfirm() {
+      document.getElementById('delete-username-display').textContent = currentUser.username;
+      document.getElementById('delete-confirmation-input').value = '';
+      document.getElementById('delete-error').classList.add('hidden');
+      document.getElementById('settings-modal').classList.add('hidden');
+      document.getElementById('delete-modal').classList.remove('hidden');
+    }
+
+    function closeDeleteConfirm() {
+      document.getElementById('delete-modal').classList.add('hidden');
+      document.getElementById('settings-modal').classList.remove('hidden');
+    }
+
+    async function confirmDelete() {
+      const confirmation = document.getElementById('delete-confirmation-input').value;
+      const token = localStorage.getItem('token');
+
+      try {
+        const res = await fetch(`${API}/api/account`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ confirmation })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert('account deleted successfully');
+          logout();
+        } else {
+          const errorEl = document.getElementById('delete-error');
+          errorEl.textContent = data.error;
+          errorEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        const errorEl = document.getElementById('delete-error');
+        errorEl.textContent = 'server error';
+        errorEl.classList.remove('hidden');
+      }
     }
 
     async function uploadAvatar() {
