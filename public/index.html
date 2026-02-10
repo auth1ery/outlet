@@ -136,7 +136,7 @@
       <p class="auth-subtitle">login to continue</p>
       <div id="login-error" class="error hidden"></div>
       <form id="login-form">
-        <input type="email" class="input" placeholder="email" id="login-email" required>
+        <input type="text" class="input" placeholder="username" id="login-username" required>
         <input type="password" class="input" placeholder="password" id="login-password" required>
         <button type="submit" class="btn">login</button>
       </form>
@@ -150,7 +150,6 @@
       <p class="auth-subtitle">join outlet today</p>
       <div id="register-error" class="error hidden"></div>
       <form id="register-form">
-        <input type="email" class="input" placeholder="email" id="register-email" required>
         <input type="text" class="input" placeholder="username" id="register-username" required>
         <input type="password" class="input" placeholder="password" id="register-password" required>
         <button type="submit" class="btn">register</button>
@@ -172,7 +171,6 @@
       <div class="sidebar-footer">
         <div>
           <div id="current-username"></div>
-          <div class="user-info" id="current-email"></div>
         </div>
         <button class="logout-btn" onclick="logout()">logout</button>
       </div>
@@ -491,7 +489,6 @@
       try {
         currentUser = user;
         document.getElementById('current-username').textContent = user.display_name || user.username;
-        document.getElementById('current-email').textContent = user.email;
         setTheme(user.theme || 'dark');
         
         initSocket(token);
@@ -509,14 +506,14 @@
       e.preventDefault();
       hideError('login');
 
-      const email = document.getElementById('login-email').value;
+      const username = document.getElementById('login-username').value;
       const password = document.getElementById('login-password').value;
 
       try {
         const res = await fetch(`${API}/api/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ username, password })
         });
 
         const data = await res.json();
@@ -537,7 +534,6 @@
       e.preventDefault();
       hideError('register');
 
-      const email = document.getElementById('register-email').value;
       const username = document.getElementById('register-username').value;
       const password = document.getElementById('register-password').value;
 
@@ -545,7 +541,7 @@
         const res = await fetch(`${API}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, username, password })
+          body: JSON.stringify({ username, password })
         });
 
         const data = await res.json();
