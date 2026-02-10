@@ -100,13 +100,11 @@
     .auth-title { margin-bottom: 8px; text-align: center; }
     .auth-subtitle { margin-bottom: 24px; text-align: center; color: var(--text-secondary); }
     .error { padding: 12px; background: var(--error); border-radius: 4px; margin-bottom: 16px; font-size: 14px; color: white; }
-    .success { padding: 12px; background: var(--success); border-radius: 4px; margin-bottom: 16px; font-size: 14px; color: white; }
     .input { width: 100%; padding: 12px; margin-bottom: 16px; background: var(--bg-tertiary); border: 1px solid var(--bg-tertiary); border-radius: 4px; color: var(--text-primary); outline: none; font-family: inherit; font-size: 14px; }
     .btn { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 4px; color: white; font-weight: 500; cursor: pointer; margin-bottom: 8px; font-family: inherit; font-size: 14px; }
     .btn:hover { background: var(--accent-hover); }
     .btn-link { width: 100%; padding: 12px; background: transparent; border: none; color: var(--accent); cursor: pointer; font-size: 14px; font-family: inherit; }
     .btn-link:hover { text-decoration: underline; }
-    .code-input { text-align: center; font-size: 24px; letter-spacing: 8px; }
     .loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 14px; color: var(--text-secondary); }
     .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: var(--bg-secondary); border-radius: 8px; width: 500px; max-height: 80vh; overflow-y: auto; }
@@ -158,20 +156,6 @@
         <button type="submit" class="btn">register</button>
       </form>
       <button class="btn-link" onclick="showLogin()">already have an account? login</button>
-    </div>
-  </div>
-
-  <div id="verify" class="auth-container hidden">
-    <div class="auth-box">
-      <h2 class="auth-title">verify email</h2>
-      <p class="auth-subtitle" id="verify-email-text"></p>
-      <div id="verify-error" class="error hidden"></div>
-      <div id="verify-success" class="success hidden"></div>
-      <form id="verify-form">
-        <input type="text" class="input code-input" placeholder="6-digit code" id="verify-code" maxlength="6" required>
-        <button type="submit" class="btn">verify</button>
-      </form>
-      <button class="btn-link" onclick="resendCode()">resend code</button>
     </div>
   </div>
 
@@ -257,12 +241,11 @@
     let currentUser = null;
     let typingTimeout = null;
     let typingUsers = new Set();
-    let registerEmail = '';
     let isInitialized = false;
     let selectedTheme = 'dark';
 
     function showView(viewId) {
-      ['loading', 'login', 'register', 'verify', 'app'].forEach(id => {
+      ['loading', 'login', 'register', 'app'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       document.getElementById(viewId).classList.remove('hidden');
@@ -391,29 +374,6 @@
         }
       } catch (err) {
         console.error(err);
-      }
-    }
-
-    async function resendCode() {
-      try {
-        const res = await fetch(`${API}/api/resend`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: registerEmail })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          const successEl = document.getElementById('verify-success');
-          successEl.textContent = data.message;
-          successEl.classList.remove('hidden');
-          setTimeout(() => successEl.classList.add('hidden'), 3000);
-        } else {
-          showError('verify', data.error);
-        }
-      } catch (err) {
-        showError('verify', 'server error');
       }
     }
 
@@ -591,41 +551,14 @@
         const data = await res.json();
 
         if (res.ok) {
-          registerEmail = email;
-          document.getElementById('verify-email-text').textContent = `enter the 6-digit code sent to ${email}`;
-          showView('verify');
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          await initApp(data.token, data.user);
         } else {
           showError('register', data.error);
         }
       } catch (err) {
         showError('register', 'server error');
-      }
-    });
-
-    document.getElementById('verify-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideError('verify');
-
-      const code = document.getElementById('verify-code').value;
-
-      try {
-        const res = await fetch(`${API}/api/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: registerEmail, code })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          await initApp(data.token, data.user);
-        } else {
-          showError('verify', data.error);
-        }
-      } catch (err) {
-        showError('verify', 'server error');
       }
     });
 
